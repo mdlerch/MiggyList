@@ -250,7 +250,7 @@ export default function InboxProcessor({ userId, boardId, onClose, onUpdateItem,
 
   // Fetch inbox data on mount
   useEffect(() => {
-    fetch('/api/inbox', { headers: { 'x-user-id': userId } })
+    fetch('/miggylist-api/inbox', { headers: { 'x-user-id': userId } })
       .then((r) => r.json())
       .then((data) => {
         setTasks(data.tasks.filter((t) => t.boardId === boardId));

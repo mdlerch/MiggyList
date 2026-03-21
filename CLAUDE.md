@@ -28,7 +28,7 @@ MiggyList is a full-stack task management app with a React/Vite frontend and an 
 - All backend logic lives in a single file: `server/index.js` (~400 lines) — routes, data access, and auth all in one place
 - The data store is `server/db.json` (file-based, no external DB)
 - Authentication is stateless: user ID is passed on every request via `x-user-id` header, stored client-side in `localStorage`
-- The Vite dev server proxies `/api/*` to `http://localhost:3001`, so no CORS issues in dev
+- The Vite dev server proxies `/miggylist-api/*` to `http://localhost:3001`, so no CORS issues in dev
 - The client is deployed under the `/MiggyList/` base path (configured in `client/vite.config.js`)
 
 **Data model hierarchy:**

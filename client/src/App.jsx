@@ -64,7 +64,7 @@ export default function App() {
   async function fetchBoards() {
     try {
       setLoading(true);
-      const res = await fetch('/api/boards', { headers: authHeaders() });
+      const res = await fetch('/miggylist-api/boards', { headers: authHeaders() });
       if (!res.ok) throw new Error('Failed to load boards');
       const data = await res.json();
       setBoards(data);
@@ -79,7 +79,7 @@ export default function App() {
   async function fetchBoard(id) {
     try {
       setBoardLoading(true);
-      const res = await fetch(`/api/boards/${id}`, { headers: authHeaders() });
+      const res = await fetch(`/miggylist-api/boards/${id}`, { headers: authHeaders() });
       if (!res.ok) throw new Error('Failed to load board');
       const data = await res.json();
       setBoardData(data);
@@ -94,7 +94,7 @@ export default function App() {
     setBoards((prev) => prev.map((b) => b.id === boardId ? { ...b, ...updates } : b));
     setBoardData((prev) => prev && prev.id === boardId ? { ...prev, ...updates } : prev);
     try {
-      await fetch(`/api/boards/${boardId}`, {
+      await fetch(`/miggylist-api/boards/${boardId}`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(updates),
@@ -105,7 +105,7 @@ export default function App() {
   }
 
   async function handleDeleteBoard(boardId) {
-    const res = await fetch(`/api/boards/${boardId}`, { method: 'DELETE', headers: authHeaders() });
+    const res = await fetch(`/miggylist-api/boards/${boardId}`, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) return;
     setBoards((prev) => prev.filter((b) => b.id !== boardId));
     if (activeBoardId === boardId) {
@@ -117,7 +117,7 @@ export default function App() {
 
   async function handleReorderBoards(newOrder) {
     setBoards(newOrder);
-    await fetch('/api/boards/reorder', {
+    await fetch('/miggylist-api/boards/reorder', {
       method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify({ order: newOrder.map((b) => b.id) }),
@@ -127,7 +127,7 @@ export default function App() {
   async function handleCreateBoard(name) {
     const colors = ['#0073ea', '#9c27b0', '#00c875', '#e2445c', '#fdab3d', '#1e7e34'];
     const color = colors[Math.floor(Math.random() * colors.length)];
-    const res = await fetch('/api/boards', {
+    const res = await fetch('/miggylist-api/boards', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ name, color }),
@@ -144,7 +144,7 @@ export default function App() {
       groups: prev.groups.map((g) => g.id === groupId ? { ...g, ...updates } : g),
     }));
     try {
-      await fetch(`/api/groups/${groupId}`, {
+      await fetch(`/miggylist-api/groups/${groupId}`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify(updates),
@@ -164,7 +164,7 @@ export default function App() {
       return { ...prev, groups };
     });
     try {
-      await fetch(`/api/items/${itemId}/move`, {
+      await fetch(`/miggylist-api/items/${itemId}/move`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({ toGroupId, toIndex }),
@@ -175,7 +175,7 @@ export default function App() {
   }
 
   async function handleImportBoard(boardData) {
-    const res = await fetch('/api/boards/import', {
+    const res = await fetch('/miggylist-api/boards/import', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(boardData),
@@ -189,7 +189,7 @@ export default function App() {
   async function handleCreateGroup(boardId, name) {
     const groupColors = ['#00c875', '#fdab3d', '#e2445c', '#0073ea', '#9c27b0', '#00bcd4'];
     const color = groupColors[Math.floor(Math.random() * groupColors.length)];
-    const res = await fetch(`/api/boards/${boardId}/groups`, {
+    const res = await fetch(`/miggylist-api/boards/${boardId}/groups`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ name, color }),
@@ -203,7 +203,7 @@ export default function App() {
   }
 
   async function handleCreateItem(boardId, groupId, itemData) {
-    const res = await fetch(`/api/boards/${boardId}/groups/${groupId}/items`, {
+    const res = await fetch(`/miggylist-api/boards/${boardId}/groups/${groupId}/items`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(itemData),
@@ -219,7 +219,7 @@ export default function App() {
   }
 
   async function handleUpdateItem(itemId, updates) {
-    const res = await fetch(`/api/items/${itemId}`, {
+    const res = await fetch(`/miggylist-api/items/${itemId}`, {
       method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify(updates),
@@ -236,7 +236,7 @@ export default function App() {
   }
 
   async function handleDeleteItem(itemId) {
-    const res = await fetch(`/api/items/${itemId}`, { method: 'DELETE', headers: authHeaders() });
+    const res = await fetch(`/miggylist-api/items/${itemId}`, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) return;
     setBoardData((prev) => ({
       ...prev,
@@ -248,7 +248,7 @@ export default function App() {
   }
 
   async function handleArchiveItem(itemId) {
-    const res = await fetch(`/api/items/${itemId}/archive`, { method: 'POST', headers: authHeaders() });
+    const res = await fetch(`/miggylist-api/items/${itemId}/archive`, { method: 'POST', headers: authHeaders() });
     if (!res.ok) return;
     setBoardData((prev) => ({
       ...prev,
@@ -260,14 +260,14 @@ export default function App() {
   }
 
   async function handleUnarchiveItem(itemId) {
-    const res = await fetch(`/api/items/${itemId}/unarchive`, { method: 'POST', headers: authHeaders() });
+    const res = await fetch(`/miggylist-api/items/${itemId}/unarchive`, { method: 'POST', headers: authHeaders() });
     if (!res.ok) return;
     // Refresh the board to show the restored item in its group
     if (activeBoardId) fetchBoard(activeBoardId);
   }
 
   async function handleDeleteGroup(groupId) {
-    const res = await fetch(`/api/groups/${groupId}`, { method: 'DELETE', headers: authHeaders() });
+    const res = await fetch(`/miggylist-api/groups/${groupId}`, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) return;
     setBoardData((prev) => ({
       ...prev,

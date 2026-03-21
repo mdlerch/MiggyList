@@ -19,7 +19,7 @@ export default function ArchivedTasksModal({ boardId, boardName, userId, onUnarc
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/boards/${boardId}/archived`, {
+    fetch(`/miggylist-api/boards/${boardId}/archived`, {
       headers: { 'x-user-id': userId, 'Content-Type': 'application/json' },
     })
       .then((r) => r.ok ? r.json() : [])

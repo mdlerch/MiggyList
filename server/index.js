@@ -74,8 +74,8 @@ function requireAuth(req, res, next) {
 
 // ── Auth Routes ─────────────────────────────────────────────────────────────
 
-// POST /api/auth/login
-app.post('/api/auth/login', (req, res) => {
+// POST /miggylist-api/auth/login
+app.post('/miggylist-api/auth/login', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'username and password required' });
   const user = db.users.find((u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
@@ -83,8 +83,8 @@ app.post('/api/auth/login', (req, res) => {
   res.json({ id: user.id, username: user.username });
 });
 
-// POST /api/auth/register
-app.post('/api/auth/register', (req, res) => {
+// POST /miggylist-api/auth/register
+app.post('/miggylist-api/auth/register', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'username and password required' });
   if (db.users.find((u) => u.username.toLowerCase() === username.toLowerCase())) {
@@ -99,8 +99,8 @@ app.post('/api/auth/register', (req, res) => {
 
 // ── Data Routes (all require auth) ─────────────────────────────────────────
 
-// GET /api/inbox
-app.get('/api/inbox', requireAuth, (req, res) => {
+// GET /miggylist-api/inbox
+app.get('/miggylist-api/inbox', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const tasks = [];
   for (const board of boards) {
@@ -119,15 +119,15 @@ app.get('/api/inbox', requireAuth, (req, res) => {
   res.json({ tasks, boards: boardList });
 });
 
-// GET /api/boards
-app.get('/api/boards', requireAuth, (req, res) => {
+// GET /miggylist-api/boards
+app.get('/miggylist-api/boards', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const summary = boards.map(({ id, name, color, emoji }) => ({ id, name, color, emoji }));
   res.json(summary);
 });
 
-// GET /api/boards/:id
-app.get('/api/boards/:id', requireAuth, (req, res) => {
+// GET /miggylist-api/boards/:id
+app.get('/miggylist-api/boards/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const board = boards.find((b) => b.id === req.params.id);
   if (!board) return res.status(404).json({ error: 'Board not found' });
@@ -142,8 +142,8 @@ app.get('/api/boards/:id', requireAuth, (req, res) => {
   res.json(filtered);
 });
 
-// GET /api/boards/:id/archived
-app.get('/api/boards/:id/archived', requireAuth, (req, res) => {
+// GET /miggylist-api/boards/:id/archived
+app.get('/miggylist-api/boards/:id/archived', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const board = boards.find((b) => b.id === req.params.id);
   if (!board) return res.status(404).json({ error: 'Board not found' });
@@ -173,8 +173,8 @@ app.get('/api/boards/:id/archived', requireAuth, (req, res) => {
   res.json(archivedItems);
 });
 
-// POST /api/boards
-app.post('/api/boards', requireAuth, (req, res) => {
+// POST /miggylist-api/boards
+app.post('/miggylist-api/boards', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const { name, color, emoji } = req.body;
   if (!name) return res.status(400).json({ error: 'name required' });
@@ -190,8 +190,8 @@ app.post('/api/boards', requireAuth, (req, res) => {
   res.status(201).json(board);
 });
 
-// POST /api/boards/:id/groups
-app.post('/api/boards/:id/groups', requireAuth, (req, res) => {
+// POST /miggylist-api/boards/:id/groups
+app.post('/miggylist-api/boards/:id/groups', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const board = boards.find((b) => b.id === req.params.id);
   if (!board) return res.status(404).json({ error: 'Board not found' });
@@ -208,8 +208,8 @@ app.post('/api/boards/:id/groups', requireAuth, (req, res) => {
   res.status(201).json(group);
 });
 
-// POST /api/boards/:id/groups/:groupId/items
-app.post('/api/boards/:id/groups/:groupId/items', requireAuth, (req, res) => {
+// POST /miggylist-api/boards/:id/groups/:groupId/items
+app.post('/miggylist-api/boards/:id/groups/:groupId/items', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const board = boards.find((b) => b.id === req.params.id);
   if (!board) return res.status(404).json({ error: 'Board not found' });
@@ -233,8 +233,8 @@ app.post('/api/boards/:id/groups/:groupId/items', requireAuth, (req, res) => {
   res.status(201).json(item);
 });
 
-// POST /api/boards/import
-app.post('/api/boards/import', requireAuth, (req, res) => {
+// POST /miggylist-api/boards/import
+app.post('/miggylist-api/boards/import', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const incoming = req.body;
   if (!incoming || !incoming.name || !Array.isArray(incoming.groups)) {
@@ -265,8 +265,8 @@ app.post('/api/boards/import', requireAuth, (req, res) => {
   res.status(201).json(board);
 });
 
-// PUT /api/items/:id
-app.put('/api/items/:id', requireAuth, (req, res) => {
+// PUT /miggylist-api/items/:id
+app.put('/miggylist-api/items/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
@@ -282,8 +282,8 @@ app.put('/api/items/:id', requireAuth, (req, res) => {
   res.json(item);
 });
 
-// PUT /api/items/:id/move
-app.put('/api/items/:id/move', requireAuth, (req, res) => {
+// PUT /miggylist-api/items/:id/move
+app.put('/miggylist-api/items/:id/move', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
@@ -302,8 +302,8 @@ app.put('/api/items/:id/move', requireAuth, (req, res) => {
   res.json(item);
 });
 
-// PUT /api/boards/reorder  (must be before /api/boards/:id to avoid conflict)
-app.put('/api/boards/reorder', requireAuth, (req, res) => {
+// PUT /miggylist-api/boards/reorder  (must be before /miggylist-api/boards/:id to avoid conflict)
+app.put('/miggylist-api/boards/reorder', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const { order } = req.body;
   if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array' });
@@ -314,8 +314,8 @@ app.put('/api/boards/reorder', requireAuth, (req, res) => {
   res.json(db.boards[req.userId].map(({ id, name, color, emoji }) => ({ id, name, color, emoji })));
 });
 
-// PUT /api/boards/:id
-app.put('/api/boards/:id', requireAuth, (req, res) => {
+// PUT /miggylist-api/boards/:id
+app.put('/miggylist-api/boards/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const board = boards.find((b) => b.id === req.params.id);
   if (!board) return res.status(404).json({ error: 'Board not found' });
@@ -327,8 +327,8 @@ app.put('/api/boards/:id', requireAuth, (req, res) => {
   res.json(board);
 });
 
-// PUT /api/groups/:id
-app.put('/api/groups/:id', requireAuth, (req, res) => {
+// PUT /miggylist-api/groups/:id
+app.put('/miggylist-api/groups/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const found = findGroup(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Group not found' });
@@ -340,8 +340,8 @@ app.put('/api/groups/:id', requireAuth, (req, res) => {
   res.json(group);
 });
 
-// POST /api/items/:id/archive
-app.post('/api/items/:id/archive', requireAuth, (req, res) => {
+// POST /miggylist-api/items/:id/archive
+app.post('/miggylist-api/items/:id/archive', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
@@ -350,8 +350,8 @@ app.post('/api/items/:id/archive', requireAuth, (req, res) => {
   res.json(found.item);
 });
 
-// POST /api/items/:id/unarchive
-app.post('/api/items/:id/unarchive', requireAuth, (req, res) => {
+// POST /miggylist-api/items/:id/unarchive
+app.post('/miggylist-api/items/:id/unarchive', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
@@ -360,8 +360,8 @@ app.post('/api/items/:id/unarchive', requireAuth, (req, res) => {
   res.json(found.item);
 });
 
-// DELETE /api/items/:id
-app.delete('/api/items/:id', requireAuth, (req, res) => {
+// DELETE /miggylist-api/items/:id
+app.delete('/miggylist-api/items/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
@@ -371,8 +371,8 @@ app.delete('/api/items/:id', requireAuth, (req, res) => {
   res.status(204).end();
 });
 
-// DELETE /api/groups/:id
-app.delete('/api/groups/:id', requireAuth, (req, res) => {
+// DELETE /miggylist-api/groups/:id
+app.delete('/miggylist-api/groups/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const found = findGroup(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Group not found' });
@@ -382,8 +382,8 @@ app.delete('/api/groups/:id', requireAuth, (req, res) => {
   res.status(204).end();
 });
 
-// DELETE /api/boards/:id
-app.delete('/api/boards/:id', requireAuth, (req, res) => {
+// DELETE /miggylist-api/boards/:id
+app.delete('/miggylist-api/boards/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const board = boards.find((b) => b.id === req.params.id);
   if (!board) return res.status(404).json({ error: 'Board not found' });

@@ -16,7 +16,7 @@ export default function LoginScreen({ onLogin }) {
     }
     setLoading(true);
     try {
-      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+      const endpoint = mode === 'login' ? '/miggylist-api/auth/login' : '/miggylist-api/auth/register';
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
