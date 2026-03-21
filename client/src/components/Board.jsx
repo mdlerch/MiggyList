@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 const STATUS_OPTIONS = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
+
+function GroupGap({ index, active, isOver, onDragOver, onDrop }) {
+  return (
+    <div
+      className={`group-gap${active ? ' group-gap-active' : ''}${isOver ? ' group-gap-over' : ''}`}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    />
+  );
+}
 import Group from './Group.jsx';
 import AddItemModal from './AddItemModal.jsx';
 import EmojiPicker, { defaultEmoji } from './EmojiPicker.jsx';
@@ -90,6 +100,7 @@ export default function Board({
   const [draggingGroupId, setDraggingGroupId] = useState(null);
   const [groupDropIndex, setGroupDropIndex] = useState(null);
   const draggingGroupRef = useRef(null);
+  const groupDropIndexRef = useRef(null); // ref mirror so handleGroupDrop never reads stale closure
 
   function handleItemDragStart(e, itemId, groupId) {
     draggingRef.current = { itemId, groupId };
@@ -147,16 +158,17 @@ export default function Board({
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
+    groupDropIndexRef.current = index;
     setGroupDropIndex((prev) => prev === index ? prev : index);
   }
 
-  function handleGroupDrop(e, index) {
+  function handleGroupDrop(e) {
     e.preventDefault();
     const fromId = draggingGroupRef.current;
-    if (!fromId) { handleGroupDragEnd(); return; }
+    const toIndex = groupDropIndexRef.current;
+    if (!fromId || toIndex === null) { handleGroupDragEnd(); return; }
     const groups = board.groups;
     const fromIndex = groups.findIndex((g) => g.id === fromId);
-    let toIndex = index;
     if (fromIndex === toIndex || fromIndex + 1 === toIndex) { handleGroupDragEnd(); return; }
     const newGroups = [...groups];
     const [removed] = newGroups.splice(fromIndex, 1);
@@ -167,6 +179,7 @@ export default function Board({
 
   function handleGroupDragEnd() {
     draggingGroupRef.current = null;
+    groupDropIndexRef.current = null;
     setDraggingGroupId(null);
     setGroupDropIndex(null);
   }
@@ -306,42 +319,72 @@ export default function Board({
           </div>
         )}
 
-        {board.groups.map((group, index) => (
-          <React.Fragment key={group.id}>
-            {groupDropIndex === index && draggingGroupId !== group.id && (
-              <div className="group-drop-indicator" />
-            )}
-            <Group
-              group={group}
-              onAddItem={() => handleOpenModal(group.id)}
-              onUpdateItem={onUpdateItem}
-              onDeleteItem={onDeleteItem}
-              onArchiveItem={onArchiveItem}
-              onDeleteGroup={onDeleteGroup}
-              onUpdateGroup={onUpdateGroup}
-              dropTarget={draggingGroupId ? null : dropTarget}
-              draggingId={draggingGroupId ? null : draggingId}
-              onItemDragStart={handleItemDragStart}
-              onItemDragOver={handleItemDragOver}
-              onItemDrop={handleItemDrop}
-              onDragEnd={handleDragEnd}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              onToggleGroupSelect={handleToggleGroupSelect}
-              isDraggingGroup={draggingGroupId === group.id}
-              onGroupDragStart={(e) => handleGroupDragStart(e, group.id)}
-              onGroupDragOver={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                handleGroupDragOver(e, e.clientY < rect.top + rect.height / 2 ? index : index + 1);
-              }}
-              onGroupDrop={(e) => handleGroupDrop(e, groupDropIndex)}
-              onGroupDragEnd={handleGroupDragEnd}
-            />
-          </React.Fragment>
-        ))}
-        {groupDropIndex === board.groups.length && (
-          <div className="group-drop-indicator" />
-        )}
+        {board.groups.map((group, index) => {
+          const gapHandlers = (gapIndex) => ({
+            onDragOver: (e) => {
+              if (!draggingGroupRef.current) return;
+              handleGroupDragOver(e, gapIndex);
+            },
+            onDrop: (e) => {
+              if (!draggingGroupRef.current) return;
+              handleGroupDrop(e);
+            },
+          });
+          return (
+            <React.Fragment key={group.id}>
+              <GroupGap
+                index={index}
+                active={!!draggingGroupId}
+                isOver={groupDropIndex === index}
+                {...gapHandlers(index)}
+              />
+              <Group
+                group={group}
+                onAddItem={() => handleOpenModal(group.id)}
+                onUpdateItem={onUpdateItem}
+                onDeleteItem={onDeleteItem}
+                onArchiveItem={onArchiveItem}
+                onDeleteGroup={onDeleteGroup}
+                onUpdateGroup={onUpdateGroup}
+                dropTarget={draggingGroupId ? null : dropTarget}
+                draggingId={draggingGroupId ? null : draggingId}
+                onItemDragStart={handleItemDragStart}
+                onItemDragOver={handleItemDragOver}
+                onItemDrop={handleItemDrop}
+                onDragEnd={handleDragEnd}
+                selectedIds={selectedIds}
+                onToggleSelect={handleToggleSelect}
+                onToggleGroupSelect={handleToggleGroupSelect}
+                isDraggingGroup={draggingGroupId === group.id}
+                groupDragActive={!!draggingGroupId}
+                onGroupDragStart={(e) => handleGroupDragStart(e, group.id)}
+                onGroupDragOver={(e) => {
+                  if (!draggingGroupRef.current) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  handleGroupDragOver(e, e.clientY < rect.top + rect.height / 2 ? index : index + 1);
+                }}
+                onGroupDrop={(e) => {
+                  if (!draggingGroupRef.current) return;
+                  handleGroupDrop(e);
+                }}
+                onGroupDragEnd={handleGroupDragEnd}
+              />
+            </React.Fragment>
+          );
+        })}
+        <GroupGap
+          index={board.groups.length}
+          active={!!draggingGroupId}
+          isOver={groupDropIndex === board.groups.length}
+          onDragOver={(e) => {
+            if (!draggingGroupRef.current) return;
+            handleGroupDragOver(e, board.groups.length);
+          }}
+          onDrop={(e) => {
+            if (!draggingGroupRef.current) return;
+            handleGroupDrop(e);
+          }}
+        />
 
         {/* Add Group area */}
         {addingGroup ? (

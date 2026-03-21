@@ -471,8 +471,20 @@ html, body, #root {
 }
 
 /* ── Group card ───────────────────────────────────────────────────────────── */
+.group-gap {
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  transition: background 100ms ease;
+}
+
+.group-gap-over {
+  background: var(--sidebar-accent);
+  height: 4px;
+  margin: 10px 0;
+}
+
 .group-card {
-  margin-bottom: 24px;
   background: var(--content-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
@@ -504,13 +516,6 @@ html, body, #root {
   cursor: grabbing;
 }
 
-.group-drop-indicator {
-  height: 3px;
-  background: var(--sidebar-accent);
-  border-radius: 2px;
-  margin-bottom: 6px;
-  pointer-events: none;
-}
 
 .group-header {
   display: flex;

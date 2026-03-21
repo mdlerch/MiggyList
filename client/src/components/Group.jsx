@@ -68,12 +68,18 @@ export default function Group({
   onToggleSelect,
   onToggleGroupSelect,
   isDraggingGroup,
+  groupDragActive,
   onGroupDragStart,
   onGroupDragOver,
   onGroupDrop,
   onGroupDragEnd,
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      const stored = localStorage.getItem('miggylist_collapsed_groups');
+      return stored ? !!JSON.parse(stored)[group.id] : false;
+    } catch { return false; }
+  });
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(group.name);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -149,7 +155,16 @@ export default function Group({
         {/* Collapse toggle */}
         <button
           className="group-collapse-btn"
-          onClick={() => setCollapsed((c) => !c)}
+          onClick={() => setCollapsed((c) => {
+            const next = !c;
+            try {
+              const stored = localStorage.getItem('miggylist_collapsed_groups');
+              const map = stored ? JSON.parse(stored) : {};
+              if (next) map[group.id] = true; else delete map[group.id];
+              localStorage.setItem('miggylist_collapsed_groups', JSON.stringify(map));
+            } catch {}
+            return next;
+          })}
           title={collapsed ? 'Expand' : 'Collapse'}
         >
           <svg
@@ -257,8 +272,8 @@ export default function Group({
             </tr>
           </thead>
           <tbody
-            onDragOver={(e) => { e.preventDefault(); onItemDragOver(e, group.id, null); }}
-            onDrop={(e) => onItemDrop(e, group.id)}
+            onDragOver={groupDragActive ? undefined : (e) => { e.preventDefault(); onItemDragOver(e, group.id, null); }}
+            onDrop={groupDragActive ? undefined : (e) => onItemDrop(e, group.id)}
           >
             {group.items.map((item, index) => (
               <React.Fragment key={item.id}>
@@ -274,15 +289,15 @@ export default function Group({
                   isDragging={draggingId === item.id}
                   isSelected={selectedIds.has(item.id)}
                   onToggleSelect={() => onToggleSelect(item.id)}
-                  onDragStart={(e) => onItemDragStart(e, item.id, group.id)}
-                  onDragOver={(e) => {
+                  onDragStart={(e) => { e.stopPropagation(); onItemDragStart(e, item.id, group.id); }}
+                  onDragOver={groupDragActive ? undefined : (e) => {
                     e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     const isTopHalf = e.clientY < rect.top + rect.height / 2;
                     const insertBeforeId = isTopHalf ? item.id : (group.items[index + 1]?.id ?? null);
                     onItemDragOver(e, group.id, insertBeforeId);
                   }}
-                  onDrop={(e) => { e.stopPropagation(); onItemDrop(e, group.id); }}
+                  onDrop={groupDragActive ? undefined : (e) => { e.stopPropagation(); onItemDrop(e, group.id); }}
                   onDragEnd={onDragEnd}
                 />
               </React.Fragment>
@@ -305,6 +320,7 @@ export default function Group({
           </tbody>
         </table>
       )}
+
     </div>
   );
 }
