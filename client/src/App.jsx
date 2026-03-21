@@ -266,6 +266,19 @@ export default function App() {
     if (activeBoardId) fetchBoard(activeBoardId);
   }
 
+  async function handleReorderGroups(boardId, newGroups) {
+    setBoardData((prev) => prev && prev.id === boardId ? { ...prev, groups: newGroups } : prev);
+    try {
+      await fetch(`/miggylist-api/boards/${boardId}/groups/reorder`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ order: newGroups.map((g) => g.id) }),
+      });
+    } catch (e) {
+      console.error('Failed to reorder groups:', e);
+    }
+  }
+
   async function handleDeleteGroup(groupId) {
     const res = await fetch(`/miggylist-api/groups/${groupId}`, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) return;
@@ -333,6 +346,7 @@ export default function App() {
             onUpdateBoard={handleUpdateBoard}
             onUpdateGroup={handleUpdateGroup}
             onMoveItem={handleMoveItem}
+            onReorderGroups={(newGroups) => handleReorderGroups(boardData.id, newGroups)}
             onProcessInbox={() => setInboxOpen(true)}
             userId={currentUser?.id}
           />

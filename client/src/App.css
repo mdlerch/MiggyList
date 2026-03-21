@@ -480,6 +480,38 @@ html, body, #root {
   border: 1px solid var(--content-border);
 }
 
+.group-card-dragging {
+  opacity: 0.4;
+}
+
+.group-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d0d3e0;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity var(--transition);
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.group-header:hover .group-drag-handle {
+  opacity: 1;
+}
+
+.group-drag-handle:active {
+  cursor: grabbing;
+}
+
+.group-drop-indicator {
+  height: 3px;
+  background: var(--sidebar-accent);
+  border-radius: 2px;
+  margin-bottom: 6px;
+  pointer-events: none;
+}
+
 .group-header {
   display: flex;
   align-items: center;

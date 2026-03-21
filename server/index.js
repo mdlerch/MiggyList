@@ -327,6 +327,20 @@ app.put('/miggylist-api/boards/:id', requireAuth, (req, res) => {
   res.json(board);
 });
 
+// PUT /miggylist-api/boards/:boardId/groups/reorder
+app.put('/miggylist-api/boards/:boardId/groups/reorder', requireAuth, (req, res) => {
+  const boards = getUserBoards(req.userId);
+  const board = boards.find((b) => b.id === req.params.boardId);
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  const { order } = req.body;
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array' });
+  const reordered = order.map((id) => board.groups.find((g) => g.id === id)).filter(Boolean);
+  const missing = board.groups.filter((g) => !order.includes(g.id));
+  board.groups = [...reordered, ...missing];
+  saveLocalCache();
+  res.json(board.groups.map(({ id, name }) => ({ id, name })));
+});
+
 // PUT /miggylist-api/groups/:id
 app.put('/miggylist-api/groups/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);

@@ -18,6 +18,7 @@ export default function Board({
   onUpdateBoard,
   onUpdateGroup,
   onMoveItem,
+  onReorderGroups,
   onProcessInbox,
   userId,
 }) {
@@ -80,10 +81,15 @@ export default function Board({
     setSelectedIds(new Set());
   }
 
-  // ── Drag state ────────────────────────────────────────────────────────────
+  // ── Item drag state ────────────────────────────────────────────────────────
   const [dropTarget, setDropTarget] = useState(null); // { groupId, insertBeforeId }
   const [draggingId, setDraggingId] = useState(null);
   const draggingRef = useRef(null); // { itemId, fromGroupId }
+
+  // ── Group drag state ───────────────────────────────────────────────────────
+  const [draggingGroupId, setDraggingGroupId] = useState(null);
+  const [groupDropIndex, setGroupDropIndex] = useState(null);
+  const draggingGroupRef = useRef(null);
 
   function handleItemDragStart(e, itemId, groupId) {
     draggingRef.current = { itemId, groupId };
@@ -128,6 +134,41 @@ export default function Board({
     draggingRef.current = null;
     setDraggingId(null);
     setDropTarget(null);
+  }
+
+  function handleGroupDragStart(e, groupId) {
+    draggingGroupRef.current = groupId;
+    setDraggingGroupId(groupId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', groupId);
+  }
+
+  function handleGroupDragOver(e, index) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setGroupDropIndex((prev) => prev === index ? prev : index);
+  }
+
+  function handleGroupDrop(e, index) {
+    e.preventDefault();
+    const fromId = draggingGroupRef.current;
+    if (!fromId) { handleGroupDragEnd(); return; }
+    const groups = board.groups;
+    const fromIndex = groups.findIndex((g) => g.id === fromId);
+    let toIndex = index;
+    if (fromIndex === toIndex || fromIndex + 1 === toIndex) { handleGroupDragEnd(); return; }
+    const newGroups = [...groups];
+    const [removed] = newGroups.splice(fromIndex, 1);
+    newGroups.splice(fromIndex < toIndex ? toIndex - 1 : toIndex, 0, removed);
+    onReorderGroups(newGroups);
+    handleGroupDragEnd();
+  }
+
+  function handleGroupDragEnd() {
+    draggingGroupRef.current = null;
+    setDraggingGroupId(null);
+    setGroupDropIndex(null);
   }
 
   const totalItems = board.groups.reduce((sum, g) => sum + g.items.length, 0);
@@ -265,27 +306,42 @@ export default function Board({
           </div>
         )}
 
-        {board.groups.map((group) => (
-          <Group
-            key={group.id}
-            group={group}
-            onAddItem={() => handleOpenModal(group.id)}
-            onUpdateItem={onUpdateItem}
-            onDeleteItem={onDeleteItem}
-            onArchiveItem={onArchiveItem}
-            onDeleteGroup={onDeleteGroup}
-            onUpdateGroup={onUpdateGroup}
-            dropTarget={dropTarget}
-            draggingId={draggingId}
-            onItemDragStart={handleItemDragStart}
-            onItemDragOver={handleItemDragOver}
-            onItemDrop={handleItemDrop}
-            onDragEnd={handleDragEnd}
-            selectedIds={selectedIds}
-            onToggleSelect={handleToggleSelect}
-            onToggleGroupSelect={handleToggleGroupSelect}
-          />
+        {board.groups.map((group, index) => (
+          <React.Fragment key={group.id}>
+            {groupDropIndex === index && draggingGroupId !== group.id && (
+              <div className="group-drop-indicator" />
+            )}
+            <Group
+              group={group}
+              onAddItem={() => handleOpenModal(group.id)}
+              onUpdateItem={onUpdateItem}
+              onDeleteItem={onDeleteItem}
+              onArchiveItem={onArchiveItem}
+              onDeleteGroup={onDeleteGroup}
+              onUpdateGroup={onUpdateGroup}
+              dropTarget={draggingGroupId ? null : dropTarget}
+              draggingId={draggingGroupId ? null : draggingId}
+              onItemDragStart={handleItemDragStart}
+              onItemDragOver={handleItemDragOver}
+              onItemDrop={handleItemDrop}
+              onDragEnd={handleDragEnd}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onToggleGroupSelect={handleToggleGroupSelect}
+              isDraggingGroup={draggingGroupId === group.id}
+              onGroupDragStart={(e) => handleGroupDragStart(e, group.id)}
+              onGroupDragOver={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                handleGroupDragOver(e, e.clientY < rect.top + rect.height / 2 ? index : index + 1);
+              }}
+              onGroupDrop={(e) => handleGroupDrop(e, groupDropIndex)}
+              onGroupDragEnd={handleGroupDragEnd}
+            />
+          </React.Fragment>
         ))}
+        {groupDropIndex === board.groups.length && (
+          <div className="group-drop-indicator" />
+        )}
 
         {/* Add Group area */}
         {addingGroup ? (

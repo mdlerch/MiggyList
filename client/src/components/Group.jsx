@@ -67,12 +67,18 @@ export default function Group({
   selectedIds,
   onToggleSelect,
   onToggleGroupSelect,
+  isDraggingGroup,
+  onGroupDragStart,
+  onGroupDragOver,
+  onGroupDrop,
+  onGroupDragEnd,
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState(group.name);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [colorAnchorRect, setColorAnchorRect] = useState(null);
+  const dragEnabledRef = useRef(false);
 
   // Keep nameVal in sync if group.name changes externally
   useEffect(() => { setNameVal(group.name); }, [group.name]);
@@ -102,12 +108,33 @@ export default function Group({
   }
 
   return (
-    <div className="group-card">
+    <div
+      className={`group-card${isDraggingGroup ? ' group-card-dragging' : ''}`}
+      draggable
+      onDragStart={(e) => { if (!dragEnabledRef.current) { e.preventDefault(); return; } onGroupDragStart(e); }}
+      onDragOver={onGroupDragOver}
+      onDrop={onGroupDrop}
+      onDragEnd={() => { dragEnabledRef.current = false; onGroupDragEnd(); }}
+    >
       {/* Group header */}
       <div
         className="group-header"
         style={{ borderLeft: `4px solid ${group.color}` }}
       >
+        {/* Drag handle */}
+        <span
+          className="group-drag-handle"
+          title="Drag to reorder"
+          onMouseDown={() => { dragEnabledRef.current = true; }}
+          onMouseUp={() => { dragEnabledRef.current = false; }}
+        >
+          <svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor">
+            <circle cx="3.5" cy="3" r="1.2"/><circle cx="8.5" cy="3" r="1.2"/>
+            <circle cx="3.5" cy="7" r="1.2"/><circle cx="8.5" cy="7" r="1.2"/>
+            <circle cx="3.5" cy="11" r="1.2"/><circle cx="8.5" cy="11" r="1.2"/>
+          </svg>
+        </span>
+
         {/* Group select-all checkbox */}
         <input
           type="checkbox"
