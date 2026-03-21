@@ -170,6 +170,20 @@ export default function Group({
 
         <span className="group-item-count">{group.items.length}</span>
 
+        {/* Add item (collapsed only) */}
+        {collapsed && (
+          <button
+            className="group-add-item-btn"
+            onClick={(e) => { e.stopPropagation(); onAddItem(); }}
+            title="Add item"
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+            Add Item
+          </button>
+        )}
+
         {/* Delete group */}
         <button
           className="group-delete-btn"
