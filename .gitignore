@@ -1,0 +1,23 @@
+**/db.json
+
+node_modules/
+
+dist/
+build/
+
+.cache/
+.parcel-cache/
+.eslintcache/
+
+.env
+.env.local
+
+.DS_Store
+Thumbs.db
+
+# --- Claude Code ---
+# Ignore local machine-specific settings
+.claude/settings.local.json
+.claude/cache/
+.claude/sessions/
+
