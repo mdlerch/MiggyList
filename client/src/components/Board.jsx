@@ -91,6 +91,11 @@ export default function Board({
     setSelectedIds(new Set());
   }
 
+  async function handleBulkArchive() {
+    await Promise.all([...selectedIds].map((id) => onArchiveItem(id)));
+    setSelectedIds(new Set());
+  }
+
   // ── Item drag state ────────────────────────────────────────────────────────
   const [dropTarget, setDropTarget] = useState(null); // { groupId, insertBeforeId }
   const [draggingId, setDraggingId] = useState(null);
@@ -302,6 +307,14 @@ export default function Board({
             <option value="" disabled>Move to group…</option>
             {board.groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
+          <button className="bulk-archive-btn" onClick={handleBulkArchive}>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style={{ marginRight: 5, verticalAlign: -1 }}>
+              <rect x="1" y="2.5" width="12" height="3" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M2.5 5.5v5a1 1 0 001 1h7a1 1 0 001-1v-5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              <path d="M5.5 8.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            Archive
+          </button>
           <button className="bulk-clear-btn" onClick={() => setSelectedIds(new Set())}>✕ Clear</button>
         </div>
       )}

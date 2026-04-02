@@ -749,6 +749,26 @@ html, body, #root {
   border-color: #aaa;
 }
 
+.bulk-archive-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--content-border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  font-size: 12px;
+  color: var(--content-text-dim);
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
+}
+
+.bulk-archive-btn:hover {
+  border-color: var(--high);
+  color: var(--high);
+  background: #fff4e0;
+}
+
 .bulk-clear-btn {
   margin-left: auto;
   padding: 6px 12px;
