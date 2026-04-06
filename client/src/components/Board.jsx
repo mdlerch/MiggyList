@@ -466,6 +466,7 @@ export default function Board({
           boardName={board.name}
           userId={userId}
           onUnarchive={onUnarchiveItem}
+          onDeleteItem={onDeleteItem}
           onClose={() => setArchivedOpen(false)}
         />
       )}

@@ -173,6 +173,18 @@ app.get('/miggylist-api/boards/:id/archived', requireAuth, (req, res) => {
   res.json(archivedItems);
 });
 
+// DELETE /miggylist-api/boards/:id/archived  — delete all archived items for a board
+app.delete('/miggylist-api/boards/:id/archived', requireAuth, (req, res) => {
+  const boards = getUserBoards(req.userId);
+  const board = boards.find((b) => b.id === req.params.id);
+  if (!board) return res.status(404).json({ error: 'Board not found' });
+  for (const group of board.groups) {
+    group.items = group.items.filter((i) => !i.archived_at);
+  }
+  saveLocalCache();
+  res.status(204).end();
+});
+
 // POST /miggylist-api/boards
 app.post('/miggylist-api/boards', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);

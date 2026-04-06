@@ -13,7 +13,7 @@ function daysRemaining(archivedAt) {
   return 30 - daysPassed;
 }
 
-export default function ArchivedTasksModal({ boardId, boardName, userId, onUnarchive, onClose }) {
+export default function ArchivedTasksModal({ boardId, boardName, userId, onUnarchive, onDeleteItem, onClose }) {
   const [archivedItems, setArchivedItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,6 +32,20 @@ export default function ArchivedTasksModal({ boardId, boardName, userId, onUnarc
     setArchivedItems((prev) => prev.filter((a) => a.item.id !== itemId));
   }
 
+  async function handleDelete(itemId) {
+    await onDeleteItem(itemId);
+    setArchivedItems((prev) => prev.filter((a) => a.item.id !== itemId));
+  }
+
+  async function handleDeleteAll() {
+    if (!window.confirm(`Permanently delete all ${archivedItems.length} archived task(s)? This cannot be undone.`)) return;
+    const res = await fetch(`/miggylist-api/boards/${boardId}/archived`, {
+      method: 'DELETE',
+      headers: { 'x-user-id': userId },
+    });
+    if (res.ok) setArchivedItems([]);
+  }
+
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal archived-modal">
@@ -44,11 +58,18 @@ export default function ArchivedTasksModal({ boardId, boardName, userId, onUnarc
             </svg>
             Archived — {boardName}
           </span>
-          <button className="modal-close" onClick={onClose} title="Close">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-          </button>
+          <div className="modal-header-actions">
+            {archivedItems.length > 0 && (
+              <button className="delete-all-btn" onClick={handleDeleteAll} title="Permanently delete all archived tasks">
+                Delete All
+              </button>
+            )}
+            <button className="modal-close" onClick={onClose} title="Close">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="archived-modal-body">
@@ -94,6 +115,13 @@ export default function ArchivedTasksModal({ boardId, boardName, userId, onUnarc
                           title="Restore to board"
                         >
                           Unarchive
+                        </button>
+                        <button
+                          className="delete-archived-btn"
+                          onClick={() => handleDelete(item.id)}
+                          title="Permanently delete"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>
