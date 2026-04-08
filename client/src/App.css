@@ -662,6 +662,7 @@ html, body, #root {
 .col-priority{ width: 120px; }
 .col-assignee{ width: 150px; }
 .col-due     { width: 130px; }
+.col-delegate { width: 120px; }
 .col-actions { width: 52px; text-align: center !important; }
 
 /* ── Task row ─────────────────────────────────────────────────────────────── */
@@ -1024,6 +1025,78 @@ html, body, #root {
 .row-delete-btn:hover {
   background: #fee8ec;
   color: var(--stuck);
+}
+
+/* ── Delegate column ──────────────────────────────────────────────────────── */
+.delegate-btn {
+  background: none;
+  border: 1px solid #d8dce8;
+  border-radius: var(--radius-sm);
+  color: #9aa0b8;
+  font-size: 12px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  white-space: nowrap;
+}
+
+.delegate-btn:hover {
+  background: #eef1fb;
+  color: #5060a0;
+  border-color: #b0b8d8;
+}
+
+.task-row-delegated {
+  opacity: 0.55;
+  transition: opacity var(--transition), background var(--transition);
+}
+
+.task-row-delegated:hover {
+  opacity: 0.8;
+}
+
+.delegated-cell {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.delegated-name {
+  font-size: 12.5px;
+  color: #8892b0;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.undelegate-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  color: #c4c4c4;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity var(--transition), background var(--transition), color var(--transition);
+}
+
+.task-row:hover .undelegate-btn {
+  opacity: 1;
+}
+
+.undelegate-btn:hover {
+  background: #eef1fb;
+  color: #5060a0;
+}
+
+/* ── Delegate modal ───────────────────────────────────────────────────────── */
+.delegate-modal {
+  width: 380px;
 }
 
 /* ── Add Item row ─────────────────────────────────────────────────────────── */
@@ -1872,6 +1945,18 @@ html, body, #root {
   filter: brightness(0.95);
 }
 
+.inbox-btn-delegate {
+  background: none;
+  color: #9aa0b8;
+  border: 1px solid #d8dce8;
+}
+
+.inbox-btn-delegate:hover {
+  background: #eef1fb;
+  color: #5060a0;
+  border-color: #b0b8d8;
+}
+
 /* ── Focus / timer view ───────────────────────────────────────────────────── */
 .focus-body {
   align-items: center;
@@ -2234,6 +2319,172 @@ html, body, #root {
 .row-archive-btn:hover {
   background: #fff4e0;
   color: var(--high);
+}
+
+/* ── Statistics modal ────────────────────────────────────────────────────── */
+.stats-modal {
+  width: 680px;
+  max-width: 96vw;
+}
+
+.stats-body {
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Period toggle */
+.stats-period-toggle {
+  display: flex;
+  align-self: center;
+  background: #f4f5f8;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.stats-period-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 6px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #888;
+  transition: background var(--transition), color var(--transition);
+}
+
+.stats-period-btn.active {
+  background: #fff;
+  color: #333;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+}
+
+/* Summary cards */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.stats-card {
+  background: #fafbff;
+  border: 1px solid #eef0f8;
+  border-radius: 8px;
+  padding: 14px 12px 12px;
+  text-align: center;
+}
+
+.stats-card-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stats-card-label {
+  font-size: 11px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+
+/* Chart section titles */
+.stats-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 14px;
+}
+
+/* Donut section */
+.stats-donut-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.stats-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 150px;
+}
+
+.stats-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
+}
+
+.stats-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stats-legend-label {
+  flex: 1;
+}
+
+.stats-legend-count {
+  font-weight: 600;
+  color: #333;
+  min-width: 20px;
+  text-align: right;
+}
+
+/* Bar chart section */
+.stats-bar-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-bar-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+  justify-content: center;
+  font-size: 12px;
+  color: #888;
+}
+
+.stats-bar-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Loading / empty states */
+.stats-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #aaa;
+  font-size: 13px;
+  padding: 20px 0;
+  justify-content: center;
+}
+
+.stats-empty-msg {
+  color: #bbb;
+  font-size: 13px;
+  text-align: center;
+  padding: 24px 0;
+  font-style: italic;
 }
 
 /* ── Archived tasks modal ─────────────────────────────────────────────────── */

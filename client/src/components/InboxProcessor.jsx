@@ -225,6 +225,36 @@ function AllDoneView({ onClose }) {
   );
 }
 
+// ── Delegate view ────────────────────────────────────────────────────────────
+function DelegateView({ onDelegate, onCancel }) {
+  const [name, setName] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  return (
+    <>
+      <div className="inbox-body edit-body">
+        <div className="form-field">
+          <label>Delegate to</label>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Name (optional)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onDelegate(name.trim())}
+          />
+        </div>
+      </div>
+      <div className="modal-footer">
+        <button className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-primary" onClick={() => onDelegate(name.trim())}>Delegate</button>
+      </div>
+    </>
+  );
+}
+
 // ── Celebration overlay ──────────────────────────────────────────────────────
 function Celebration() {
   return (
@@ -331,6 +361,11 @@ export default function InboxProcessor({ userId, boardId, onClose, onUpdateItem,
     advance();
   }
 
+  async function handleDelegateSave(name) {
+    await onUpdateItem(current.item.id, { delegated_to: name });
+    advance();
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const totalCount = tasks.length;
@@ -376,14 +411,20 @@ export default function InboxProcessor({ userId, boardId, onClose, onUpdateItem,
             onCancel={() => setMode('processing')}
             onSave={handleEditSave}
           />
+        ) : mode === 'delegate' ? (
+          <DelegateView
+            onDelegate={handleDelegateSave}
+            onCancel={() => setMode('processing')}
+          />
         ) : (
           <>
             <ProcessingView task={current} />
             <div className="modal-footer inbox-footer">
-              <button className="btn inbox-btn-do"   onClick={handleDoTask}>▶ Do Task Now</button>
-              <button className="btn inbox-btn-skip" onClick={handleSkip}>Skip</button>
-              <button className="btn inbox-btn-edit" onClick={handleEditOpen}>Update Task</button>
-              <button className="btn btn-secondary"  onClick={onClose}>Stop Processing</button>
+              <button className="btn inbox-btn-do"       onClick={handleDoTask}>▶ Do Task Now</button>
+              <button className="btn inbox-btn-delegate" onClick={() => setMode('delegate')}>Delegate</button>
+              <button className="btn inbox-btn-skip"     onClick={handleSkip}>Skip</button>
+              <button className="btn inbox-btn-edit"     onClick={handleEditOpen}>Update Task</button>
+              <button className="btn btn-secondary"      onClick={onClose}>Stop Processing</button>
             </div>
           </>
         )}

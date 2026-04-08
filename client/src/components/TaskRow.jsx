@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import DescriptionModal from './DescriptionModal.jsx';
+import DelegateModal from './DelegateModal.jsx';
 
 const STATUS_OPTIONS = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
-const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Critical'];
 
 function statusClass(status) {
   switch (status) {
@@ -14,35 +14,6 @@ function statusClass(status) {
   }
 }
 
-function priorityClass(priority) {
-  switch (priority) {
-    case 'Critical': return 'badge-critical';
-    case 'High':     return 'badge-high';
-    case 'Medium':   return 'badge-medium';
-    default:         return 'badge-low';
-  }
-}
-
-// Deterministic avatar colour from name
-const AVATAR_COLORS = [
-  '#0073ea', '#9c27b0', '#00c875', '#e2445c',
-  '#fdab3d', '#1976d2', '#388e3c', '#c62828',
-];
-function avatarColor(name) {
-  if (!name) return '#c4c4c4';
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
-function initials(name) {
-  if (!name) return '?';
-  return name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -84,10 +55,8 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
   const [titleVal, setTitleVal] = useState(item.title);
   const [descOpen, setDescOpen] = useState(false);
 
-  const [editingAssignee, setEditingAssignee] = useState(false);
-  const [assigneeVal, setAssigneeVal] = useState(item.assignee);
-
   const [editingDue, setEditingDue] = useState(false);
+  const [delegateModalOpen, setDelegateModalOpen] = useState(false);
 
   // Title handlers
   function commitTitle() {
@@ -101,18 +70,6 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
     if (e.key === 'Escape') { setTitleVal(item.title); setEditingTitle(false); }
   }
 
-  // Assignee handlers
-  function commitAssignee() {
-    const v = assigneeVal.trim();
-    if (v !== item.assignee) onUpdate({ assignee: v });
-    else setAssigneeVal(item.assignee);
-    setEditingAssignee(false);
-  }
-  function assigneeKeyDown(e) {
-    if (e.key === 'Enter') e.target.blur();
-    if (e.key === 'Escape') { setAssigneeVal(item.assignee); setEditingAssignee(false); }
-  }
-
   // Due date handler
   function handleDueChange(e) {
     const v = e.target.value;
@@ -122,11 +79,12 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
 
   const descPreview = stripMarkdown(item.description);
   const hasDesc = !!item.description;
+  const isDelegated = item.delegated_to !== null && item.delegated_to !== undefined;
 
   return (
     <>
     <tr
-      className={`task-row${isDragging ? ' task-row-dragging' : ''}${isSelected ? ' task-row-selected' : ''}`}
+      className={`task-row${isDragging ? ' task-row-dragging' : ''}${isSelected ? ' task-row-selected' : ''}${isDelegated ? ' task-row-delegated' : ''}`}
       draggable
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -233,65 +191,6 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
         </div>
       </td>
 
-      {/* Priority */}
-      <td>
-        <div className="badge-wrap">
-          <div style={{ position: 'relative', display: 'inline-flex' }}>
-            <span className={`badge ${priorityClass(item.priority)}`}>
-              {item.priority}
-            </span>
-            <select
-              className="cell-select"
-              value={item.priority}
-              onChange={(e) => onUpdate({ priority: e.target.value })}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                opacity: 0,
-                cursor: 'pointer',
-                width: '100%',
-                height: '100%',
-              }}
-              title="Change priority"
-            >
-              {PRIORITY_OPTIONS.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </td>
-
-      {/* Assignee */}
-      <td>
-        <div className="assignee-cell">
-          <div
-            className="assignee-avatar"
-            style={{ background: avatarColor(item.assignee) }}
-          >
-            {initials(item.assignee)}
-          </div>
-          {editingAssignee ? (
-            <input
-              autoFocus
-              className="assignee-input"
-              value={assigneeVal}
-              onChange={(e) => setAssigneeVal(e.target.value)}
-              onBlur={commitAssignee}
-              onKeyDown={assigneeKeyDown}
-            />
-          ) : (
-            <span
-              className="assignee-name"
-              onClick={() => setEditingAssignee(true)}
-              title="Click to edit"
-            >
-              {item.assignee || <em style={{ color: '#c4c4c4' }}>Unassigned</em>}
-            </span>
-          )}
-        </div>
-      </td>
-
       {/* Due date */}
       <td>
         {editingDue ? (
@@ -313,6 +212,35 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
               <em style={{ color: '#c4c4c4', fontStyle: 'normal' }}>—</em>
             )}
           </span>
+        )}
+      </td>
+
+      {/* Delegate */}
+      <td className="col-delegate">
+        {isDelegated ? (
+          <div className="delegated-cell">
+            <span className="delegated-name">
+              {item.delegated_to || 'Delegated'}
+            </span>
+            <button
+              className="undelegate-btn"
+              onClick={() => onUpdate({ delegated_to: null })}
+              title="Undelegate"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M9 1.5A5 5 0 1 0 10.5 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                <path d="M10.5 1.5v3h-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button
+            className="delegate-btn"
+            onClick={() => setDelegateModalOpen(true)}
+            title="Delegate this task"
+          >
+            Delegate
+          </button>
         )}
       </td>
 
@@ -352,6 +280,12 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
         item={item}
         onSave={(description) => onUpdate({ description })}
         onClose={() => setDescOpen(false)}
+      />
+    )}
+    {delegateModalOpen && (
+      <DelegateModal
+        onDelegate={(name) => { onUpdate({ delegated_to: name }); setDelegateModalOpen(false); }}
+        onClose={() => setDelegateModalOpen(false)}
       />
     )}
     </>

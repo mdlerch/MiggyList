@@ -15,6 +15,7 @@ import Group from './Group.jsx';
 import AddItemModal from './AddItemModal.jsx';
 import EmojiPicker, { defaultEmoji } from './EmojiPicker.jsx';
 import ArchivedTasksModal from './ArchivedTasksModal.jsx';
+import StatisticsModal from './StatisticsModal.jsx';
 
 export default function Board({
   board,
@@ -38,6 +39,7 @@ export default function Board({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerAnchorRect, setPickerAnchorRect] = useState(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
 
   // ── Board title editing ────────────────────────────────────────────────────
   const [editingBoardTitle, setEditingBoardTitle] = useState(false);
@@ -278,6 +280,14 @@ export default function Board({
           </svg>
           Archived
         </button>
+        <button className="board-export-btn" onClick={() => setStatsOpen(true)} title="View statistics">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="1" y="7" width="2.5" height="6" rx="1" fill="currentColor"/>
+            <rect x="5.5" y="4" width="2.5" height="9" rx="1" fill="currentColor"/>
+            <rect x="10" y="1.5" width="2.5" height="11.5" rx="1" fill="currentColor"/>
+          </svg>
+          Statistics
+        </button>
         <button className="process-inbox-btn" onClick={onProcessInbox}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <rect x="1" y="1" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
@@ -468,6 +478,16 @@ export default function Board({
           onUnarchive={onUnarchiveItem}
           onDeleteItem={onDeleteItem}
           onClose={() => setArchivedOpen(false)}
+        />
+      )}
+
+      {/* Statistics modal */}
+      {statsOpen && (
+        <StatisticsModal
+          boardId={board.id}
+          boardName={board.name}
+          userId={userId}
+          onClose={() => setStatsOpen(false)}
         />
       )}
     </>

@@ -4,12 +4,16 @@ const STATUS_OPTIONS = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'
 const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Critical'];
 
 export default function AddItemModal({ onSubmit, onClose }) {
+  const twoWeeksFromNow = new Date();
+  twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
+  const defaultDueDate = twoWeeksFromNow.toISOString().slice(0, 10);
+
   const [form, setForm] = useState({
     title: '',
     status: 'Inbox',
     priority: 'Medium',
     assignee: '',
-    due_date: '',
+    due_date: defaultDueDate,
   });
   const titleRef = useRef(null);
 

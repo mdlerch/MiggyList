@@ -26,14 +26,16 @@ if (fs.existsSync(DB_PATH)) {
     db = {
       users: [{ id: smithId, username: 'smith', password: 'tree' }],
       boards: { [smithId]: raw },
+      stats: {},
     };
     saveLocalCache();
   } else {
     db = raw;
+    if (!db.stats) db.stats = {};
     console.log(`Loaded ${db.users.length} user(s) from db.json`);
   }
 } else {
-  db = { users: [], boards: {} };
+  db = { users: [], boards: {}, stats: {} };
   saveLocalCache();
   console.log('db.json not found — created empty multi-user database');
 }
@@ -60,6 +62,17 @@ function findGroup(boards, groupId) {
     if (group) return { board, group };
   }
   return null;
+}
+
+// ── Stats helper ─────────────────────────────────────────────────────────────
+const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+
+function logEvent(userId, type, boardId) {
+  if (!db.stats[userId]) db.stats[userId] = [];
+  db.stats[userId].push({ type, boardId, ts: new Date().toISOString() });
+  // Prune events older than 90 days to cap storage growth
+  const cutoff = Date.now() - NINETY_DAYS_MS;
+  db.stats[userId] = db.stats[userId].filter((e) => new Date(e.ts).getTime() > cutoff);
 }
 
 // Middleware to require authentication for data routes
@@ -241,6 +254,7 @@ app.post('/miggylist-api/boards/:id/groups/:groupId/items', requireAuth, (req, r
     description: description || '',
   };
   group.items.push(item);
+  logEvent(req.userId, 'created', req.params.id);
   saveLocalCache();
   res.status(201).json(item);
 });
@@ -282,14 +296,19 @@ app.put('/miggylist-api/items/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
-  const { item } = found;
-  const { title, status, priority, assignee, due_date, description } = req.body;
+  const { item, board } = found;
+  const { title, status, priority, assignee, due_date, description, delegated_to } = req.body;
+  const prevStatus = item.status;
+  const wasDelegated = item.delegated_to !== null && item.delegated_to !== undefined;
   if (title !== undefined) item.title = title;
   if (status !== undefined) item.status = status;
   if (priority !== undefined) item.priority = priority;
   if (assignee !== undefined) item.assignee = assignee;
   if (due_date !== undefined) item.due_date = due_date;
   if (description !== undefined) item.description = description;
+  if (delegated_to !== undefined) item.delegated_to = delegated_to;
+  if (status === 'Done' && prevStatus !== 'Done') logEvent(req.userId, 'completed', board.id);
+  if (delegated_to !== undefined && delegated_to !== null && !wasDelegated) logEvent(req.userId, 'delegated', board.id);
   saveLocalCache();
   res.json(item);
 });
@@ -372,6 +391,7 @@ app.post('/miggylist-api/items/:id/archive', requireAuth, (req, res) => {
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
   found.item.archived_at = new Date().toISOString();
+  logEvent(req.userId, 'archived', found.board.id);
   saveLocalCache();
   res.json(found.item);
 });
@@ -391,8 +411,9 @@ app.delete('/miggylist-api/items/:id', requireAuth, (req, res) => {
   const boards = getUserBoards(req.userId);
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
-  const { group, item } = found;
+  const { group, item, board } = found;
   group.items = group.items.filter((i) => i.id !== item.id);
+  logEvent(req.userId, 'deleted', board.id);
   saveLocalCache();
   res.status(204).end();
 });
@@ -416,6 +437,41 @@ app.delete('/miggylist-api/boards/:id', requireAuth, (req, res) => {
   db.boards[req.userId] = boards.filter((b) => b.id !== req.params.id);
   saveLocalCache();
   res.status(204).end();
+});
+
+// GET /miggylist-api/stats
+app.get('/miggylist-api/stats', requireAuth, (req, res) => {
+  const { boardId } = req.query;
+  const allEvents = db.stats[req.userId] || [];
+  const events = boardId ? allEvents.filter((e) => e.boardId === boardId) : allEvents;
+
+  const TYPES = ['created', 'completed', 'archived', 'deleted', 'delegated'];
+  function countTypes(evts) {
+    const result = {};
+    TYPES.forEach((t) => { result[t] = evts.filter((e) => e.type === t).length; });
+    return result;
+  }
+
+  // Today midnight local time
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayCounts = countTypes(events.filter((e) => new Date(e.ts) >= todayStart));
+
+  // Last 7 days including today
+  const daily = [];
+  for (let i = 6; i >= 0; i--) {
+    const dayStart = new Date(todayStart);
+    dayStart.setDate(dayStart.getDate() - i);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    const dayEvents = events.filter((e) => {
+      const ts = new Date(e.ts);
+      return ts >= dayStart && ts < dayEnd;
+    });
+    daily.push({ date: dayStart.toISOString().slice(0, 10), ...countTypes(dayEvents) });
+  }
+
+  res.json({ today: todayCounts, daily });
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────
