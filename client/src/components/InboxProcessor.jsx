@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 const STATUS_OPTIONS  = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
-const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Critical'];
 const TIMER_PRESETS   = [
   { label: '1 min',  seconds: 60   },
   { label: '5 min',  seconds: 300  },
@@ -21,12 +20,6 @@ function statusClass(s) {
   if (s === 'Not started')   return 'badge-not-started';
   return 'badge-inbox';
 }
-function priorityClass(p) {
-  if (p === 'Critical') return 'badge-critical';
-  if (p === 'High')     return 'badge-high';
-  if (p === 'Medium')   return 'badge-medium';
-  return 'badge-low';
-}
 function stripMd(md = '') {
   return md.replace(/[#*_~`>\-\[\]]/g, '').replace(/\s+/g, ' ').trim();
 }
@@ -41,8 +34,6 @@ function ProcessingView({ task }) {
       <h2 className="inbox-task-title">{item.title}</h2>
       <div className="inbox-task-meta">
         <span className={`badge ${statusClass(item.status)}`}>{item.status}</span>
-        <span className={`badge ${priorityClass(item.priority)}`}>{item.priority}</span>
-        {item.assignee && <span className="inbox-chip">👤 {item.assignee}</span>}
         {item.due_date && <span className="inbox-chip">📅 {item.due_date}</span>}
       </div>
       {preview && (
@@ -151,24 +142,6 @@ function EditView({ form, onChange, groupKey, onGroupChange, allGroups, onCancel
             <select value={form.status} onChange={(e) => set('status', e.target.value)}>
               {STATUS_OPTIONS.map((s) => <option key={s}>{s}</option>)}
             </select>
-          </div>
-          <div className="form-field">
-            <label>Priority</label>
-            <select value={form.priority} onChange={(e) => set('priority', e.target.value)}>
-              {PRIORITY_OPTIONS.map((p) => <option key={p}>{p}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-field">
-            <label>Assignee</label>
-            <input
-              type="text"
-              value={form.assignee}
-              onChange={(e) => set('assignee', e.target.value)}
-              placeholder="Name"
-            />
           </div>
           <div className="form-field">
             <label>Due Date</label>
@@ -336,8 +309,6 @@ export default function InboxProcessor({ userId, boardId, onClose, onUpdateItem,
     setEditForm({
       title:       current.item.title,
       status:      current.item.status,
-      priority:    current.item.priority,
-      assignee:    current.item.assignee || '',
       due_date:    current.item.due_date || '',
       description: current.item.description || '',
     });

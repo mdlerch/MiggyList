@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 const STATUS_OPTIONS = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
-const PRIORITY_OPTIONS = ['Low', 'Medium', 'High', 'Critical'];
 
 export default function AddItemModal({ onSubmit, onClose }) {
   const twoWeeksFromNow = new Date();
@@ -11,8 +10,6 @@ export default function AddItemModal({ onSubmit, onClose }) {
   const [form, setForm] = useState({
     title: '',
     status: 'Inbox',
-    priority: 'Medium',
-    assignee: '',
     due_date: defaultDueDate,
   });
   const titleRef = useRef(null);
@@ -70,7 +67,7 @@ export default function AddItemModal({ onSubmit, onClose }) {
               />
             </div>
 
-            {/* Status + Priority */}
+            {/* Status + Due date */}
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="item-status">Status</label>
@@ -84,34 +81,6 @@ export default function AddItemModal({ onSubmit, onClose }) {
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
-              </div>
-              <div className="form-field">
-                <label htmlFor="item-priority">Priority</label>
-                <select
-                  id="item-priority"
-                  name="priority"
-                  value={form.priority}
-                  onChange={handleChange}
-                >
-                  {PRIORITY_OPTIONS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Assignee + Due date */}
-            <div className="form-row">
-              <div className="form-field">
-                <label htmlFor="item-assignee">Assignee</label>
-                <input
-                  id="item-assignee"
-                  name="assignee"
-                  type="text"
-                  placeholder="Name"
-                  value={form.assignee}
-                  onChange={handleChange}
-                />
               </div>
               <div className="form-field">
                 <label htmlFor="item-due">Due Date</label>
