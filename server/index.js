@@ -445,11 +445,13 @@ app.get('/miggylist-api/stats', requireAuth, (req, res) => {
   const allEvents = db.stats[req.userId] || [];
   const events = boardId ? allEvents.filter((e) => e.boardId === boardId) : allEvents;
 
-  const TYPES = ['created', 'completed', 'archived', 'deleted', 'delegated'];
   function countTypes(evts) {
-    const result = {};
-    TYPES.forEach((t) => { result[t] = evts.filter((e) => e.type === t).length; });
-    return result;
+    return {
+      created:   evts.filter((e) => e.type === 'created').length,
+      completed: evts.filter((e) => e.type === 'completed').length,
+      removed:   evts.filter((e) => e.type === 'archived' || e.type === 'deleted').length,
+      delegated: evts.filter((e) => e.type === 'delegated').length,
+    };
   }
 
   // Today midnight local time
@@ -471,7 +473,28 @@ app.get('/miggylist-api/stats', requireAuth, (req, res) => {
     daily.push({ date: dayStart.toISOString().slice(0, 10), ...countTypes(dayEvents) });
   }
 
-  res.json({ today: todayCounts, daily });
+  // Board health snapshot: live item counts by status (non-archived items only)
+  let boardSnapshot = null;
+  if (boardId) {
+    const boards = db.boards[req.userId] || [];
+    const board = boards.find((b) => b.id === boardId);
+    if (board) {
+      const STATUS_ORDER = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
+      const counts = {};
+      STATUS_ORDER.forEach((s) => { counts[s] = 0; });
+      for (const group of board.groups || []) {
+        for (const item of group.items || []) {
+          if (!item.archived_at) {
+            counts[item.status] = (counts[item.status] || 0) + 1;
+          }
+        }
+      }
+      const total = Object.values(counts).reduce((s, v) => s + v, 0);
+      boardSnapshot = { counts, total, statusOrder: STATUS_ORDER };
+    }
+  }
+
+  res.json({ today: todayCounts, daily, boardSnapshot });
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────

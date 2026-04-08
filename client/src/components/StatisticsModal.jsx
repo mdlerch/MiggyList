@@ -3,10 +3,17 @@ import React, { useState, useEffect } from 'react';
 const METRICS = [
   { key: 'created',   label: 'Created',   color: '#0073ea' },
   { key: 'completed', label: 'Completed', color: '#00c875' },
-  { key: 'archived',  label: 'Archived',  color: '#fdab3d' },
-  { key: 'deleted',   label: 'Deleted',   color: '#e2445c' },
+  { key: 'removed',   label: 'Removed',   color: '#e2445c' },
   { key: 'delegated', label: 'Delegated', color: '#9c27b0' },
 ];
+
+const STATUS_COLORS = {
+  'Inbox':          '#c0c4d0',
+  'Not started':    '#808387',
+  'Working on it':  '#fdab3d',
+  'Stuck':          '#e2445c',
+  'Done':           '#00c875',
+};
 
 // ── Donut chart (today view) ─────────────────────────────────────────────────
 function DonutChart({ data }) {
@@ -23,7 +30,6 @@ function DonutChart({ data }) {
     );
   }
 
-  // Build segments from top (12 o'clock)
   let accumulated = 0;
   const GAP = total > 1 ? 2 : 0;
   const segments = METRICS
@@ -60,8 +66,8 @@ function DonutChart({ data }) {
 
 // ── Bar chart (last 7 days) ──────────────────────────────────────────────────
 function BarChart({ daily }) {
-  const SHOWN = ['created', 'completed'];
-  const COLORS = { created: '#0073ea', completed: '#00c875' };
+  const SHOWN = ['created', 'completed', 'removed'];
+  const COLORS = { created: '#0073ea', completed: '#00c875', removed: '#e2445c' };
 
   const maxVal = Math.max(1, ...daily.flatMap((d) => SHOWN.map((k) => d[k] || 0)));
 
@@ -70,12 +76,11 @@ function BarChart({ daily }) {
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
   const groupW = chartW / daily.length;
-  const barW = Math.min(20, (groupW - 12) / SHOWN.length);
-  const barGap = 3;
+  const barW = Math.min(18, (groupW - 12) / SHOWN.length);
+  const barGap = 2;
 
   const yVal = (v) => padT + chartH - (v / maxVal) * chartH;
 
-  // Compute y-axis tick values
   const rawMax = maxVal;
   const tickStep = rawMax <= 5 ? 1 : rawMax <= 10 ? 2 : rawMax <= 20 ? 5 : 10;
   const ticks = [];
@@ -86,7 +91,6 @@ function BarChart({ daily }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ overflow: 'visible' }}>
-      {/* Grid lines */}
       {ticks.map((val) => {
         const y = yVal(val);
         return (
@@ -97,7 +101,6 @@ function BarChart({ daily }) {
         );
       })}
 
-      {/* Bars + labels */}
       {daily.map((day, i) => {
         const centerX = padL + i * groupW + groupW / 2;
         const totalBarW = SHOWN.length * barW + (SHOWN.length - 1) * barGap;
@@ -153,9 +156,43 @@ function BarChart({ daily }) {
         );
       })}
 
-      {/* Baseline */}
       <line x1={padL} y1={padT + chartH} x2={W - padR} y2={padT + chartH} stroke="#e0e4ef" strokeWidth="1" />
     </svg>
+  );
+}
+
+// ── Board health snapshot ────────────────────────────────────────────────────
+function BoardSnapshot({ snapshot }) {
+  if (!snapshot || snapshot.total === 0) {
+    return <div className="stats-empty-msg">No active tasks on this board.</div>;
+  }
+
+  const { counts, total, statusOrder } = snapshot;
+
+  return (
+    <div className="stats-snapshot">
+      {statusOrder.map((status) => {
+        const count = counts[status] || 0;
+        const pct = total > 0 ? (count / total) * 100 : 0;
+        const color = STATUS_COLORS[status] || '#ccc';
+        return (
+          <div key={status} className="stats-snapshot-row">
+            <div className="stats-snapshot-label">
+              <span className="stats-snapshot-dot" style={{ background: color }} />
+              <span>{status}</span>
+            </div>
+            <div className="stats-snapshot-bar-wrap">
+              <div
+                className="stats-snapshot-bar"
+                style={{ width: `${pct}%`, background: color }}
+              />
+            </div>
+            <div className="stats-snapshot-count">{count}</div>
+          </div>
+        );
+      })}
+      <div className="stats-snapshot-total">{total} active tasks</div>
+    </div>
   );
 }
 
@@ -178,13 +215,17 @@ export default function StatisticsModal({ boardId, boardName, userId, onClose })
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Summary numbers for the selected period
   const summaryData = !data ? null : period === 'today'
     ? data.today
     : data.daily.reduce((acc, d) => {
         METRICS.forEach((m) => { acc[m.key] = (acc[m.key] || 0) + (d[m.key] || 0); });
         return acc;
       }, {});
+
+  // net > 0 → burning down (good), net < 0 → backlog growing (bad)
+  const net = summaryData
+    ? (summaryData.completed || 0) - (summaryData.created || 0)
+    : null;
 
   const hasAnyToday = data && METRICS.some((m) => (data.today[m.key] || 0) > 0);
 
@@ -235,6 +276,30 @@ export default function StatisticsModal({ boardId, boardName, userId, onClose })
                     <div className="stats-card-label">{m.label}</div>
                   </div>
                 ))}
+                {net !== null && (() => {
+                  const color = net > 0 ? '#00c875' : net < 0 ? '#e2445c' : '#c0c4d0';
+                  const label = net > 0 ? 'Burning Down' : net < 0 ? 'Growing' : 'Even';
+                  const absNet = Math.abs(net);
+                  return (
+                    <div className="stats-card" style={{ borderTop: `3px solid ${color}` }}>
+                      <div className="stats-card-velocity">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+                          {net > 0 ? (
+                            <path d="M10 3v14M4 11l6 6 6-6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          ) : net < 0 ? (
+                            <path d="M10 17V3M4 9l6-6 6 6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          ) : (
+                            <path d="M3 10h14M11 4l6 6-6 6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          )}
+                        </svg>
+                        <span style={{ color, fontSize: 26, fontWeight: 700, lineHeight: 1 }}>
+                          {absNet}
+                        </span>
+                      </div>
+                      <div className="stats-card-label">{label}</div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Chart */}
@@ -263,7 +328,7 @@ export default function StatisticsModal({ boardId, boardName, userId, onClose })
                   <div className="stats-chart-title">Daily Breakdown</div>
                   <BarChart daily={data.daily} />
                   <div className="stats-bar-legend">
-                    {['created', 'completed'].map((key) => {
+                    {['created', 'completed', 'removed'].map((key) => {
                       const m = METRICS.find((x) => x.key === key);
                       return (
                         <span key={key} className="stats-bar-legend-item">
@@ -273,6 +338,14 @@ export default function StatisticsModal({ boardId, boardName, userId, onClose })
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Board health snapshot */}
+              {data.boardSnapshot && (
+                <div className="stats-snapshot-section">
+                  <div className="stats-chart-title">Board Health</div>
+                  <BoardSnapshot snapshot={data.boardSnapshot} />
                 </div>
               )}
             </>
