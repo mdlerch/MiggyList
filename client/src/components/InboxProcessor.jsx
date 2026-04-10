@@ -149,6 +149,7 @@ function EditView({ form, onChange, groupKey, onGroupChange, allGroups, onCancel
               type="date"
               value={form.due_date}
               onChange={(e) => set('due_date', e.target.value)}
+              onClick={(e) => e.target.showPicker()}
             />
           </div>
         </div>

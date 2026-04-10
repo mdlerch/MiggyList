@@ -90,6 +90,7 @@ export default function AddItemModal({ onSubmit, onClose }) {
                   type="date"
                   value={form.due_date}
                   onChange={handleChange}
+                  onClick={(e) => e.target.showPicker()}
                 />
               </div>
             </div>

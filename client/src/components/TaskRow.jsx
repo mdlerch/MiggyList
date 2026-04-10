@@ -201,6 +201,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
             defaultValue={item.due_date}
             onChange={handleDueChange}
             onBlur={() => setEditingDue(false)}
+            onFocus={(e) => e.target.showPicker()}
           />
         ) : (
           <span
