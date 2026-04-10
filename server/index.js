@@ -241,8 +241,10 @@ app.post('/miggylist-api/boards/:id/groups/:groupId/items', requireAuth, (req, r
   const group = board.groups.find((g) => g.id === req.params.groupId);
   if (!group) return res.status(404).json({ error: 'Group not found' });
 
-  const { title, status, priority, assignee, due_date, description } = req.body;
+  const { title, status, priority, assignee, due_date, description, points } = req.body;
   if (!title) return res.status(400).json({ error: 'title required' });
+
+  const parsedPoints = points !== undefined && points !== null && points !== '' ? parseInt(points, 10) : null;
 
   const item = {
     id: uuidv4(),
@@ -252,6 +254,7 @@ app.post('/miggylist-api/boards/:id/groups/:groupId/items', requireAuth, (req, r
     assignee: assignee || '',
     due_date: due_date || '',
     description: description || '',
+    points: parsedPoints && parsedPoints > 0 ? parsedPoints : null,
   };
   group.items.push(item);
   logEvent(req.userId, 'created', req.params.id);
@@ -283,6 +286,7 @@ app.post('/miggylist-api/boards/import', requireAuth, (req, res) => {
         assignee: i.assignee || '',
         due_date: i.due_date || '',
         description: i.description || '',
+        points: i.points && i.points > 0 ? parseInt(i.points, 10) : null,
       })),
     })),
   };
@@ -297,7 +301,7 @@ app.put('/miggylist-api/items/:id', requireAuth, (req, res) => {
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
   const { item, board } = found;
-  const { title, status, priority, assignee, due_date, description, delegated_to } = req.body;
+  const { title, status, priority, assignee, due_date, description, delegated_to, points } = req.body;
   const prevStatus = item.status;
   const wasDelegated = item.delegated_to !== null && item.delegated_to !== undefined;
   if (title !== undefined) item.title = title;
@@ -307,6 +311,10 @@ app.put('/miggylist-api/items/:id', requireAuth, (req, res) => {
   if (due_date !== undefined) item.due_date = due_date;
   if (description !== undefined) item.description = description;
   if (delegated_to !== undefined) item.delegated_to = delegated_to;
+  if (points !== undefined) {
+    const p = points !== null && points !== '' ? parseInt(points, 10) : null;
+    item.points = p && p > 0 ? p : null;
+  }
   if (status === 'Done' && prevStatus !== 'Done') logEvent(req.userId, 'completed', board.id);
   if (delegated_to !== undefined && delegated_to !== null && !wasDelegated) logEvent(req.userId, 'delegated', board.id);
   saveLocalCache();
@@ -490,7 +498,16 @@ app.get('/miggylist-api/stats', requireAuth, (req, res) => {
         }
       }
       const total = Object.values(counts).reduce((s, v) => s + v, 0);
-      boardSnapshot = { counts, total, statusOrder: STATUS_ORDER };
+      let pointsTotal = 0, pointsCompleted = 0;
+      for (const group of board.groups || []) {
+        for (const item of group.items || []) {
+          if (!item.archived_at && item.points > 0) {
+            pointsTotal += item.points;
+            if (item.status === 'Done') pointsCompleted += item.points;
+          }
+        }
+      }
+      boardSnapshot = { counts, total, statusOrder: STATUS_ORDER, pointsTotal, pointsCompleted };
     }
   }
 

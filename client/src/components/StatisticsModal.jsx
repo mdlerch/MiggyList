@@ -341,6 +341,43 @@ export default function StatisticsModal({ boardId, boardName, userId, onClose })
                 </div>
               )}
 
+              {/* Points */}
+              {data.boardSnapshot && (data.boardSnapshot.pointsTotal > 0 || data.boardSnapshot.pointsCompleted > 0) && (
+                <div className="stats-points-section">
+                  <div className="stats-chart-title">Points</div>
+                  <div className="stats-points-row">
+                    <div className="stats-points-card">
+                      <div className="stats-points-value">{data.boardSnapshot.pointsTotal}</div>
+                      <div className="stats-points-label">Created</div>
+                    </div>
+                    <div className="stats-points-divider" />
+                    <div className="stats-points-card">
+                      <div className="stats-points-value" style={{ color: '#00c875' }}>{data.boardSnapshot.pointsCompleted}</div>
+                      <div className="stats-points-label">Completed</div>
+                    </div>
+                    <div className="stats-points-divider" />
+                    <div className="stats-points-card">
+                      <div className="stats-points-value" style={{ color: data.boardSnapshot.pointsTotal > 0 ? '#0073ea' : '#c0c4d0' }}>
+                        {data.boardSnapshot.pointsTotal > 0
+                          ? Math.round((data.boardSnapshot.pointsCompleted / data.boardSnapshot.pointsTotal) * 100)
+                          : 0}%
+                      </div>
+                      <div className="stats-points-label">Complete</div>
+                    </div>
+                  </div>
+                  <div className="stats-points-bar-track">
+                    <div
+                      className="stats-points-bar-fill"
+                      style={{
+                        width: data.boardSnapshot.pointsTotal > 0
+                          ? `${(data.boardSnapshot.pointsCompleted / data.boardSnapshot.pointsTotal) * 100}%`
+                          : '0%'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Board health snapshot */}
               {data.boardSnapshot && (
                 <div className="stats-snapshot-section">

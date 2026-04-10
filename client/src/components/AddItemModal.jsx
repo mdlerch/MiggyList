@@ -11,6 +11,7 @@ export default function AddItemModal({ onSubmit, onClose }) {
     title: '',
     status: 'Inbox',
     due_date: defaultDueDate,
+    points: '',
   });
   const titleRef = useRef(null);
 
@@ -35,7 +36,8 @@ export default function AddItemModal({ onSubmit, onClose }) {
       titleRef.current?.focus();
       return;
     }
-    onSubmit({ ...form, title });
+    const points = form.points !== '' ? parseInt(form.points, 10) : null;
+    onSubmit({ ...form, title, points: points && points > 0 ? points : null });
   }
 
   return (
@@ -67,7 +69,7 @@ export default function AddItemModal({ onSubmit, onClose }) {
               />
             </div>
 
-            {/* Status + Due date */}
+            {/* Status + Due date + Points */}
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="item-status">Status</label>
@@ -91,6 +93,19 @@ export default function AddItemModal({ onSubmit, onClose }) {
                   value={form.due_date}
                   onChange={handleChange}
                   onClick={(e) => e.target.showPicker()}
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="item-points">Points</label>
+                <input
+                  id="item-points"
+                  name="points"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="—"
+                  value={form.points}
+                  onChange={handleChange}
                 />
               </div>
             </div>

@@ -152,6 +152,17 @@ function EditView({ form, onChange, groupKey, onGroupChange, allGroups, onCancel
               onClick={(e) => e.target.showPicker()}
             />
           </div>
+          <div className="form-field">
+            <label>Points</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              placeholder="—"
+              value={form.points}
+              onChange={(e) => set('points', e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="form-field">
@@ -311,6 +322,7 @@ export default function InboxProcessor({ userId, boardId, onClose, onUpdateItem,
       title:       current.item.title,
       status:      current.item.status,
       due_date:    current.item.due_date || '',
+      points:      current.item.points != null ? String(current.item.points) : '',
       description: current.item.description || '',
     });
     setEditGroupKey(`${current.boardId}::${current.groupId}`);

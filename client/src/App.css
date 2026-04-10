@@ -662,6 +662,7 @@ html, body, #root {
 .col-priority{ width: 120px; }
 .col-assignee{ width: 150px; }
 .col-due     { width: 130px; }
+.col-points  { width: 70px; text-align: center; }
 .col-delegate { width: 120px; }
 .col-actions { width: 52px; text-align: center !important; }
 
@@ -988,6 +989,31 @@ html, body, #root {
 .due-date-text.soon {
   color: var(--working);
   font-weight: 600;
+}
+
+.points-text {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--content-text);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+}
+.points-text:hover { background: #f0f2f7; }
+
+.points-input {
+  width: 60px;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--sidebar-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,115,234,0.12);
+  background: #fff;
+  text-align: center;
 }
 
 .due-date-input {
@@ -2493,6 +2519,64 @@ html, body, #root {
   text-align: center;
   padding: 24px 0;
   font-style: italic;
+}
+
+/* Points section */
+.stats-points-section {
+  margin-top: 24px;
+}
+
+.stats-points-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 10px;
+  background: #f6f7fb;
+  border-radius: var(--radius-md);
+  padding: 16px 0;
+}
+
+.stats-points-card {
+  flex: 1;
+  text-align: center;
+}
+
+.stats-points-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--content-text);
+  line-height: 1;
+}
+
+.stats-points-label {
+  font-size: 11px;
+  color: var(--content-text-dimmer);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stats-points-divider {
+  width: 1px;
+  height: 40px;
+  background: #e0e4ef;
+  flex-shrink: 0;
+}
+
+.stats-points-bar-track {
+  margin-top: 10px;
+  height: 8px;
+  background: #f0f2f7;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.stats-points-bar-fill {
+  height: 100%;
+  background: #00c875;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  min-width: 0;
 }
 
 /* Board health snapshot */

@@ -266,6 +266,7 @@ export default function Group({
               <th className="col-desc"></th>
               <th className="col-status">Status</th>
               <th className="col-due">Due Date</th>
+              <th className="col-points">Points</th>
               <th className="col-delegate">Delegate</th>
               <th className="col-actions"></th>
             </tr>
@@ -277,7 +278,7 @@ export default function Group({
             {group.items.map((item, index) => (
               <React.Fragment key={item.id}>
                 {dropTarget?.groupId === group.id && dropTarget?.insertBeforeId === item.id && (
-                  <tr className="drop-indicator-row"><td colSpan={8} /></tr>
+                  <tr className="drop-indicator-row"><td colSpan={9} /></tr>
                 )}
                 <TaskRow
                   item={item}
@@ -302,12 +303,12 @@ export default function Group({
               </React.Fragment>
             ))}
             {dropTarget?.groupId === group.id && dropTarget?.insertBeforeId === null && (
-              <tr className="drop-indicator-row"><td colSpan={8} /></tr>
+              <tr className="drop-indicator-row"><td colSpan={9} /></tr>
             )}
 
             {/* Add item row */}
             <tr className="add-item-row">
-              <td style={{ borderLeft: `4px solid ${group.color}` }} colSpan={8}>
+              <td style={{ borderLeft: `4px solid ${group.color}` }} colSpan={9}>
                 <button className="add-item-btn" onClick={onAddItem}>
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                     <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>

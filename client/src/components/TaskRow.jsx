@@ -56,6 +56,8 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
   const [descOpen, setDescOpen] = useState(false);
 
   const [editingDue, setEditingDue] = useState(false);
+  const [editingPoints, setEditingPoints] = useState(false);
+  const [pointsVal, setPointsVal] = useState(item.points != null ? String(item.points) : '');
   const [delegateModalOpen, setDelegateModalOpen] = useState(false);
 
   // Title handlers
@@ -68,6 +70,24 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
   function titleKeyDown(e) {
     if (e.key === 'Enter') e.target.blur();
     if (e.key === 'Escape') { setTitleVal(item.title); setEditingTitle(false); }
+  }
+
+  // Points handlers
+  function commitPoints() {
+    const v = pointsVal.trim();
+    const n = v === '' ? null : parseInt(v, 10);
+    const valid = n === null || (Number.isInteger(n) && n > 0);
+    if (valid) {
+      onUpdate({ points: n });
+      setPointsVal(n != null ? String(n) : '');
+    } else {
+      setPointsVal(item.points != null ? String(item.points) : '');
+    }
+    setEditingPoints(false);
+  }
+  function pointsKeyDown(e) {
+    if (e.key === 'Enter') e.target.blur();
+    if (e.key === 'Escape') { setPointsVal(item.points != null ? String(item.points) : ''); setEditingPoints(false); }
   }
 
   // Due date handler
@@ -212,6 +232,31 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
             {item.due_date ? formatDate(item.due_date) : (
               <em style={{ color: '#c4c4c4', fontStyle: 'normal' }}>—</em>
             )}
+          </span>
+        )}
+      </td>
+
+      {/* Points */}
+      <td className="col-points">
+        {editingPoints ? (
+          <input
+            autoFocus
+            type="number"
+            min="1"
+            step="1"
+            className="points-input"
+            value={pointsVal}
+            onChange={(e) => setPointsVal(e.target.value)}
+            onBlur={commitPoints}
+            onKeyDown={pointsKeyDown}
+          />
+        ) : (
+          <span
+            className="points-text"
+            onClick={() => setEditingPoints(true)}
+            title="Click to edit"
+          >
+            {item.points != null ? item.points : <em style={{ color: '#c4c4c4', fontStyle: 'normal' }}>—</em>}
           </span>
         )}
       </td>
