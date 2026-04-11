@@ -889,11 +889,11 @@ html, body, #root {
   transform: scale(1.04);
 }
 
-.badge-inbox       { background: #e8eaf6;            color: #3949ab; }
-.badge-done        { background: var(--done);        color: #fff; }
-.badge-working     { background: var(--working);     color: #fff; }
-.badge-stuck       { background: var(--stuck);       color: #fff; }
-.badge-not-started { background: var(--not-started); color: #555; }
+.badge-inbox       { background: #e8eaf6;        color: #3949ab; }
+.badge-spark       { background: #f9c74f;        color: #7a5a00; }
+.badge-slog        { background: var(--stuck);   color: #fff; }
+.badge-in-progress { background: var(--working); color: #fff; }
+.badge-done        { background: var(--done);    color: #fff; }
 
 .badge-critical { background: var(--critical); color: #fff; }
 .badge-high     { background: var(--high);     color: #fff; }

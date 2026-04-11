@@ -40,6 +40,23 @@ if (fs.existsSync(DB_PATH)) {
   console.log('db.json not found — created empty multi-user database');
 }
 
+// ── Status migration ────────────────────────────────────────────────────────
+const STATUS_MIGRATION = { 'Not started': 'Inbox', 'Not Started': 'Inbox', 'Working on it': 'In Progress', 'Stuck': 'Slog' };
+let _migrated = false;
+for (const userId of Object.keys(db.boards)) {
+  for (const board of db.boards[userId] || []) {
+    for (const group of board.groups || []) {
+      for (const item of group.items || []) {
+        if (STATUS_MIGRATION[item.status]) {
+          item.status = STATUS_MIGRATION[item.status];
+          _migrated = true;
+        }
+      }
+    }
+  }
+}
+if (_migrated) { saveLocalCache(); console.log('Migrated item statuses to new labels'); }
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function getUserBoards(userId) {
   if (!db.boards[userId]) db.boards[userId] = [];
@@ -487,7 +504,7 @@ app.get('/miggylist-api/stats', requireAuth, (req, res) => {
     const boards = db.boards[req.userId] || [];
     const board = boards.find((b) => b.id === boardId);
     if (board) {
-      const STATUS_ORDER = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
+      const STATUS_ORDER = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
       const counts = {};
       STATUS_ORDER.forEach((s) => { counts[s] = 0; });
       for (const group of board.groups || []) {

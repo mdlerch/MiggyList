@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const STATUS_OPTIONS = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
+const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 
 function GroupGap({ index, active, isOver, onDragOver, onDrop }) {
   return (

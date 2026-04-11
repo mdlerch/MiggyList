@@ -8,11 +8,11 @@ const METRICS = [
 ];
 
 const STATUS_COLORS = {
-  'Inbox':          '#c0c4d0',
-  'Not started':    '#808387',
-  'Working on it':  '#fdab3d',
-  'Stuck':          '#e2445c',
-  'Done':           '#00c875',
+  'Inbox':       '#c0c4d0',
+  'Spark':       '#f9c74f',
+  'Slog':        '#e2445c',
+  'In Progress': '#fdab3d',
+  'Done':        '#00c875',
 };
 
 // ── Donut chart (today view) ─────────────────────────────────────────────────

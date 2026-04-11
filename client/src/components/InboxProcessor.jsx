@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-const STATUS_OPTIONS  = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
+const STATUS_OPTIONS  = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 const TIMER_PRESETS   = [
   { label: '1 min',  seconds: 60   },
   { label: '5 min',  seconds: 300  },
@@ -14,10 +14,10 @@ function pad(n) { return String(n).padStart(2, '0'); }
 function formatTime(s) { return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; }
 
 function statusClass(s) {
-  if (s === 'Done')          return 'badge-done';
-  if (s === 'Working on it') return 'badge-working';
-  if (s === 'Stuck')         return 'badge-stuck';
-  if (s === 'Not started')   return 'badge-not-started';
+  if (s === 'Done')        return 'badge-done';
+  if (s === 'In Progress') return 'badge-in-progress';
+  if (s === 'Slog')        return 'badge-slog';
+  if (s === 'Spark')       return 'badge-spark';
   return 'badge-inbox';
 }
 function stripMd(md = '') {

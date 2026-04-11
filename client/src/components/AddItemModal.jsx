@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const STATUS_OPTIONS = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
+const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 
 export default function AddItemModal({ onSubmit, onClose }) {
   const twoWeeksFromNow = new Date();

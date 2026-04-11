@@ -2,15 +2,15 @@ import React, { useState, useRef } from 'react';
 import DescriptionModal from './DescriptionModal.jsx';
 import DelegateModal from './DelegateModal.jsx';
 
-const STATUS_OPTIONS = ['Inbox', 'Not started', 'Working on it', 'Stuck', 'Done'];
+const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 
 function statusClass(status) {
   switch (status) {
-    case 'Done': return 'badge-done';
-    case 'Working on it': return 'badge-working';
-    case 'Stuck': return 'badge-stuck';
-    case 'Not started': return 'badge-not-started';
-    default: return 'badge-inbox';
+    case 'Done':        return 'badge-done';
+    case 'In Progress': return 'badge-in-progress';
+    case 'Slog':        return 'badge-slog';
+    case 'Spark':       return 'badge-spark';
+    default:            return 'badge-inbox';
   }
 }
 
