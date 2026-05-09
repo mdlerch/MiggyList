@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import TaskRow from './TaskRow.jsx';
+import GroupRulesModal from './GroupRulesModal.jsx';
 
 const GROUP_COLORS = [
   '#00c875', '#00bcd4', '#0073ea', '#1976d2',
@@ -84,7 +85,10 @@ export default function Group({
   const [nameVal, setNameVal] = useState(group.name);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [colorAnchorRect, setColorAnchorRect] = useState(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const dragEnabledRef = useRef(false);
+
+  const hasRules = !!(group.rules?.auto_due_date || group.rules?.on_done_move_here);
 
   // Keep nameVal in sync if group.name changes externally
   useEffect(() => { setNameVal(group.name); }, [group.name]);
@@ -226,6 +230,18 @@ export default function Group({
           </button>
         )}
 
+        {/* Rules */}
+        <button
+          className={`group-rules-btn${hasRules ? ' has-rules' : ''}`}
+          title="Configure group rules"
+          onClick={(e) => { e.stopPropagation(); setRulesOpen(true); }}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <circle cx="6.5" cy="6.5" r="1.8" stroke="currentColor" strokeWidth="1.3"/>
+            <path d="M6.5 1v1.5M6.5 10v1.5M1 6.5h1.5M10 6.5h1.5M2.9 2.9l1.05 1.05M9.05 9.05l1.05 1.05M9.05 3.95l-1.05 1.05M3.95 9.05l-1.05 1.05" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+        </button>
+
         {/* Delete group */}
         <button
           className="group-delete-btn"
@@ -250,6 +266,15 @@ export default function Group({
           onSelect={(color) => onUpdateGroup(group.id, { color })}
           onClose={() => setColorPickerOpen(false)}
           anchorRect={colorAnchorRect}
+        />
+      )}
+
+      {/* Group rules modal */}
+      {rulesOpen && (
+        <GroupRulesModal
+          group={group}
+          onSave={(rules) => onUpdateGroup(group.id, { rules })}
+          onClose={() => setRulesOpen(false)}
         />
       )}
 

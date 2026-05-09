@@ -403,9 +403,10 @@ app.put('/miggylist-api/groups/:id', requireAuth, (req, res) => {
   const found = findGroup(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Group not found' });
   const { group } = found;
-  const { name, color } = req.body;
+  const { name, color, rules } = req.body;
   if (name !== undefined) group.name = name;
   if (color !== undefined) group.color = color;
+  if (rules !== undefined) group.rules = rules;
   saveLocalCache();
   res.json(group);
 });

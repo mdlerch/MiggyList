@@ -16,6 +16,9 @@ npm run server
 
 # Start only the Vite frontend (port 5173)
 npm run client
+
+# Build the frontend for production (output → client/dist/)
+cd client && npm run build
 ```
 
 No linting or test infrastructure exists in this project.
@@ -35,7 +38,9 @@ MiggyList is a full-stack task management app with a React/Vite frontend and an 
 ```
 User → Boards → Groups → Items
 ```
-Items have: title, status, priority, assignee, due_date, description (markdown), optional `archived_at`
+Items have: title, status, priority, assignee, due_date, description (markdown), points (integer, optional), delegated_to (string, optional), optional `archived_at`
+
+Valid status values: `Inbox`, `Spark`, `Slog`, `In Progress`, `Done`
 
 **Frontend state:** Managed entirely in `App.jsx` via React hooks; child components receive state and callbacks as props. There is no global state library (no Redux, Zustand, etc.).
 
@@ -47,14 +52,20 @@ App.jsx
 ├── Board.jsx            (selected board view)
 │   └── Group.jsx        (task column)
 │       └── TaskRow.jsx  (individual task)
+│           ├── DescriptionModal.jsx  (markdown editor for task description)
+│           └── DelegateModal.jsx     (assign task to a named person)
 └── InboxProcessor.jsx   (focus timer for inbox tasks)
 ```
 
-Modals (`AddItemModal`, `DescriptionModal`, `ArchivedTasksModal`, `EmojiPicker`) are rendered from `App.jsx` based on state flags.
+Modals rendered from `App.jsx`: `AddItemModal`, `ArchivedTasksModal`, `StatisticsModal`, `EmojiPicker`. Task-level modals (`DescriptionModal`, `DelegateModal`) are rendered inline from `TaskRow`.
 
 **Styling:** Single global CSS file (`client/src/App.css`) using CSS custom properties. Status and priority colors are defined as CSS variables. No CSS framework or CSS modules.
 
 **Notable behaviors:**
-- Archived items older than 30 days are auto-purged on server startup
-- `db.json` includes automatic migration logic for the single-user → multi-user format change
+- Archived items older than 30 days are purged when `GET /boards/:id/archived` is called (not on startup)
+- `db.json` includes automatic migration logic for the single-user → multi-user format change, and for legacy status label renames
 - Task descriptions are rendered as GitHub Flavored Markdown via `react-markdown` + `remark-gfm`
+- Drag-and-drop for task reordering uses native HTML5 drag events — no drag library
+- Stats are tracked as an event log per user in `db.stats` (events: `created`, `completed`, `archived`, `deleted`, `delegated`), pruned to 90 days. `StatisticsModal` displays counts and a 7-day chart.
+- Passwords are stored in plain text in `db.json` — this is intentional for a personal/local app
+- Board import/export: boards can be imported via `POST /miggylist-api/boards/import` with the full board JSON structure

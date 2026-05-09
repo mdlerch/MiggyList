@@ -2,15 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 
-export default function AddItemModal({ onSubmit, onClose }) {
-  const twoWeeksFromNow = new Date();
-  twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
-  const defaultDueDate = twoWeeksFromNow.toISOString().slice(0, 10);
-
+export default function AddItemModal({ onSubmit, onClose, initialDueDate }) {
   const [form, setForm] = useState({
     title: '',
     status: 'Inbox',
-    due_date: defaultDueDate,
+    due_date: initialDueDate ?? '',
     points: '',
   });
   const titleRef = useRef(null);

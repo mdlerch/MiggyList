@@ -2,6 +2,33 @@ import React, { useState, useRef, useEffect } from 'react';
 
 const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 
+function nextDayOfWeek(day) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = (day - today.getDay() + 7) % 7 || 7;
+  const result = new Date(today);
+  result.setDate(today.getDate() + diff);
+  return result.toISOString().slice(0, 10);
+}
+
+function computeInitialDueDate(group) {
+  switch (group.rules?.auto_due_date) {
+    case 'today': return new Date().toISOString().slice(0, 10);
+    case 'next-sunday': return nextDayOfWeek(0);
+    case 'next-monday': return nextDayOfWeek(1);
+    case '2-weeks': {
+      const d = new Date();
+      d.setDate(d.getDate() + 14);
+      return d.toISOString().slice(0, 10);
+    }
+    default: {
+      const d = new Date();
+      d.setDate(d.getDate() + 14);
+      return d.toISOString().slice(0, 10);
+    }
+  }
+}
+
 function GroupGap({ index, active, isOver, onDragOver, onDrop }) {
   return (
     <div
@@ -33,6 +60,9 @@ export default function Board({
   onProcessInbox,
   userId,
 }) {
+  const boardRef = useRef(board);
+  useEffect(() => { boardRef.current = board; }, [board]);
+
   const [addingGroup, setAddingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [modalState, setModalState] = useState(null);
@@ -76,8 +106,22 @@ export default function Board({
     });
   }
 
+  async function handleUpdateItemWithRules(itemId, updates) {
+    await onUpdateItem(itemId, updates);
+    if (updates.status === 'Done') {
+      const currentBoard = boardRef.current;
+      const targetGroup = currentBoard.groups.find((g) => g.rules?.on_done_move_here);
+      if (targetGroup) {
+        const fromGroup = currentBoard.groups.find((g) => g.items.some((i) => i.id === itemId));
+        if (fromGroup && fromGroup.id !== targetGroup.id) {
+          onMoveItem(itemId, fromGroup.id, targetGroup.id, targetGroup.items.length);
+        }
+      }
+    }
+  }
+
   async function handleBulkUpdateStatus(status) {
-    await Promise.all([...selectedIds].map((id) => onUpdateItem(id, { status })));
+    await Promise.all([...selectedIds].map((id) => handleUpdateItemWithRules(id, { status })));
     setSelectedIds(new Set());
   }
 
@@ -203,7 +247,8 @@ export default function Board({
   }
 
   function handleOpenModal(groupId) {
-    setModalState({ groupId });
+    const group = board.groups.find((g) => g.id === groupId);
+    setModalState({ groupId, initialDueDate: computeInitialDueDate(group) });
   }
 
   function handleModalSubmit(itemData) {
@@ -364,7 +409,7 @@ export default function Board({
               <Group
                 group={group}
                 onAddItem={() => handleOpenModal(group.id)}
-                onUpdateItem={onUpdateItem}
+                onUpdateItem={handleUpdateItemWithRules}
                 onDeleteItem={onDeleteItem}
                 onArchiveItem={onArchiveItem}
                 onDeleteGroup={onDeleteGroup}
@@ -456,6 +501,7 @@ export default function Board({
         <AddItemModal
           onSubmit={handleModalSubmit}
           onClose={() => setModalState(null)}
+          initialDueDate={modalState.initialDueDate}
         />
       )}
 
