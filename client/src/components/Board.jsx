@@ -108,9 +108,11 @@ export default function Board({
 
   async function handleUpdateItemWithRules(itemId, updates) {
     await onUpdateItem(itemId, updates);
-    if (updates.status === 'Done') {
+    if (updates.status !== undefined) {
       const currentBoard = boardRef.current;
-      const targetGroup = currentBoard.groups.find((g) => g.rules?.on_done_move_here);
+      const targetGroup = currentBoard.groups.find(
+        (g) => g.rules?.on_status_move_here?.includes(updates.status)
+      );
       if (targetGroup) {
         const fromGroup = currentBoard.groups.find((g) => g.items.some((i) => i.id === itemId));
         if (fromGroup && fromGroup.id !== targetGroup.id) {

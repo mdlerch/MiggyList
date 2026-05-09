@@ -8,9 +8,13 @@ const DUE_DATE_OPTIONS = [
   { value: '2-weeks', label: '2 Weeks from Now' },
 ];
 
+const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
+
 export default function GroupRulesModal({ group, onSave, onClose }) {
   const [autoDueDate, setAutoDueDate] = useState(group.rules?.auto_due_date || '');
-  const [onDoneMoveHere, setOnDoneMoveHere] = useState(group.rules?.on_done_move_here || false);
+  const [onStatusMoveHere, setOnStatusMoveHere] = useState(
+    () => new Set(group.rules?.on_status_move_here || [])
+  );
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose(); }
@@ -18,8 +22,19 @@ export default function GroupRulesModal({ group, onSave, onClose }) {
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  function toggleStatus(status) {
+    setOnStatusMoveHere((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status); else next.add(status);
+      return next;
+    });
+  }
+
   function handleSave() {
-    onSave({ auto_due_date: autoDueDate || null, on_done_move_here: onDoneMoveHere });
+    onSave({
+      auto_due_date: autoDueDate || null,
+      on_status_move_here: [...onStatusMoveHere],
+    });
     onClose();
   }
 
@@ -49,18 +64,20 @@ export default function GroupRulesModal({ group, onSave, onClose }) {
             </select>
           </div>
 
-          <div className="form-field rules-checkbox-field">
-            <label className="rules-checkbox-label">
-              <input
-                type="checkbox"
-                checked={onDoneMoveHere}
-                onChange={(e) => setOnDoneMoveHere(e.target.checked)}
-              />
-              Move items here when marked Done
-            </label>
-            <p className="rules-help-text">
-              When any item on this board is set to Done, it moves to this group automatically.
-            </p>
+          <div className="form-field">
+            <label>Move items here when status is set to</label>
+            <div className="rules-status-list">
+              {STATUS_OPTIONS.map((status) => (
+                <label key={status} className="rules-status-option">
+                  <input
+                    type="checkbox"
+                    checked={onStatusMoveHere.has(status)}
+                    onChange={() => toggleStatus(status)}
+                  />
+                  {status}
+                </label>
+              ))}
+            </div>
           </div>
         </div>
 

@@ -88,7 +88,7 @@ export default function Group({
   const [rulesOpen, setRulesOpen] = useState(false);
   const dragEnabledRef = useRef(false);
 
-  const hasRules = !!(group.rules?.auto_due_date || group.rules?.on_done_move_here);
+  const hasRules = !!(group.rules?.auto_due_date || group.rules?.on_status_move_here?.length);
 
   // Keep nameVal in sync if group.name changes externally
   useEffect(() => { setNameVal(group.name); }, [group.name]);
