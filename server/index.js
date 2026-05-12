@@ -1,8 +1,14 @@
-const express = require('express');
-const cors = require('cors');
-const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
-const path = require('path');
+import express from 'express';
+import cors from 'cors';
+import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { z } from 'zod';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 const app = express();
 app.use(cors());
@@ -532,8 +538,220 @@ app.get('/miggylist-api/stats', requireAuth, (req, res) => {
   res.json({ today: todayCounts, daily, boardSnapshot });
 });
 
+// ── MCP SSE Server ───────────────────────────────────────────────────────────
+
+const STATUS_VALUES = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
+const PRIORITY_VALUES = ['Low', 'Medium', 'High', 'Critical'];
+
+function createMcpServer(userId) {
+  const server = new McpServer({ name: 'miggylist', version: '1.0.0' });
+
+  server.tool('list_boards', 'List all MiggyList boards.', {}, async () => {
+    const boards = getUserBoards(userId);
+    const summary = boards.map(({ id, name, color, emoji }) => ({ id, name, color, emoji }));
+    return { content: [{ type: 'text', text: JSON.stringify(summary, null, 2) }] };
+  });
+
+  server.tool('get_board', 'Get a board with all its groups and items.',
+    { board_id: z.string().describe('Board ID') },
+    async ({ board_id }) => {
+      const boards = getUserBoards(userId);
+      const board = boards.find((b) => b.id === board_id);
+      if (!board) throw new Error('Board not found');
+      const filtered = {
+        ...board,
+        groups: board.groups.map((g) => ({
+          ...g,
+          items: g.items.filter((i) => !i.archived_at),
+        })),
+      };
+      return { content: [{ type: 'text', text: JSON.stringify(filtered, null, 2) }] };
+    }
+  );
+
+  server.tool('get_inbox', 'Get all Inbox-status tasks across all boards, with board and group context.',
+    {},
+    async () => {
+      const boards = getUserBoards(userId);
+      const tasks = [];
+      for (const board of boards) {
+        for (const group of board.groups) {
+          for (const item of group.items) {
+            if (item.status === 'Inbox' && !item.archived_at) {
+              tasks.push({ item, boardId: board.id, boardName: board.name, groupId: group.id, groupName: group.name });
+            }
+          }
+        }
+      }
+      const boardList = boards.map((b) => ({
+        id: b.id, name: b.name,
+        groups: b.groups.map((g) => ({ id: g.id, name: g.name })),
+      }));
+      return { content: [{ type: 'text', text: JSON.stringify({ tasks, boards: boardList }, null, 2) }] };
+    }
+  );
+
+  server.tool('create_item', 'Create a new task in a specific group.',
+    {
+      board_id: z.string().describe('Board ID'),
+      group_id: z.string().describe('Group ID within the board'),
+      title: z.string().describe('Task title'),
+      status: z.enum(['Inbox', 'Spark', 'Slog', 'In Progress', 'Done']).optional()
+        .describe(`Task status. One of: ${STATUS_VALUES.join(', ')}. Defaults to Inbox.`),
+      priority: z.enum(['Low', 'Medium', 'High', 'Critical']).optional()
+        .describe(`Priority. One of: ${PRIORITY_VALUES.join(', ')}. Defaults to Medium.`),
+      due_date: z.string().optional().describe('Due date (YYYY-MM-DD)'),
+      description: z.string().optional().describe('Task description (markdown supported)'),
+      points: z.number().int().optional().describe('Story points (integer)'),
+    },
+    async ({ board_id, group_id, title, status, priority, due_date, description, points }) => {
+      const boards = getUserBoards(userId);
+      const board = boards.find((b) => b.id === board_id);
+      if (!board) throw new Error('Board not found');
+      const group = board.groups.find((g) => g.id === group_id);
+      if (!group) throw new Error('Group not found');
+      const parsedPoints = points !== undefined && points !== null ? parseInt(points, 10) : null;
+      const item = {
+        id: uuidv4(),
+        title,
+        status: status || 'Inbox',
+        priority: priority || 'Medium',
+        assignee: '',
+        due_date: due_date || '',
+        description: description || '',
+        points: parsedPoints && parsedPoints > 0 ? parsedPoints : null,
+      };
+      group.items.push(item);
+      logEvent(userId, 'created', board_id);
+      saveLocalCache();
+      return { content: [{ type: 'text', text: JSON.stringify(item, null, 2) }] };
+    }
+  );
+
+  server.tool('update_item', 'Update fields on an existing task.',
+    {
+      item_id: z.string().describe('Item ID'),
+      title: z.string().optional().describe('New title'),
+      status: z.enum(['Inbox', 'Spark', 'Slog', 'In Progress', 'Done']).optional()
+        .describe(`New status. One of: ${STATUS_VALUES.join(', ')}`),
+      priority: z.enum(['Low', 'Medium', 'High', 'Critical']).optional()
+        .describe(`New priority. One of: ${PRIORITY_VALUES.join(', ')}`),
+      due_date: z.string().optional().describe('Due date (YYYY-MM-DD), or empty string to clear'),
+      description: z.string().optional().describe('Task description (markdown supported)'),
+      points: z.number().int().nullable().optional().describe('Story points, or null to clear'),
+      delegated_to: z.string().nullable().optional().describe('Person this is delegated to, or null to clear'),
+    },
+    async ({ item_id, ...fields }) => {
+      const boards = getUserBoards(userId);
+      const found = findItem(boards, item_id);
+      if (!found) throw new Error('Item not found');
+      const { item, board } = found;
+      const prevStatus = item.status;
+      const wasDelegated = item.delegated_to !== null && item.delegated_to !== undefined;
+      if (fields.title !== undefined) item.title = fields.title;
+      if (fields.status !== undefined) item.status = fields.status;
+      if (fields.priority !== undefined) item.priority = fields.priority;
+      if (fields.due_date !== undefined) item.due_date = fields.due_date;
+      if (fields.description !== undefined) item.description = fields.description;
+      if (fields.delegated_to !== undefined) item.delegated_to = fields.delegated_to;
+      if (fields.points !== undefined) {
+        const p = fields.points !== null ? parseInt(fields.points, 10) : null;
+        item.points = p && p > 0 ? p : null;
+      }
+      if (fields.status === 'Done' && prevStatus !== 'Done') logEvent(userId, 'completed', board.id);
+      if (fields.delegated_to !== undefined && fields.delegated_to !== null && !wasDelegated) logEvent(userId, 'delegated', board.id);
+      saveLocalCache();
+      return { content: [{ type: 'text', text: JSON.stringify(item, null, 2) }] };
+    }
+  );
+
+  server.tool('move_item', 'Move a task to a different group (optionally at a specific position).',
+    {
+      item_id: z.string().describe('Item ID'),
+      to_group_id: z.string().describe('Destination group ID'),
+      to_index: z.number().int().optional().describe('Position in the destination group (0-based). Appends if omitted.'),
+    },
+    async ({ item_id, to_group_id, to_index }) => {
+      const boards = getUserBoards(userId);
+      const found = findItem(boards, item_id);
+      if (!found) throw new Error('Item not found');
+      let toGroup = null;
+      for (const board of boards) {
+        const g = board.groups.find((g) => g.id === to_group_id);
+        if (g) { toGroup = g; break; }
+      }
+      if (!toGroup) throw new Error('Target group not found');
+      const { group: fromGroup, item } = found;
+      fromGroup.items = fromGroup.items.filter((i) => i.id !== item.id);
+      const idx = to_index !== undefined
+        ? Math.max(0, Math.min(to_index, toGroup.items.length))
+        : toGroup.items.length;
+      toGroup.items.splice(idx, 0, item);
+      saveLocalCache();
+      return { content: [{ type: 'text', text: JSON.stringify(item, null, 2) }] };
+    }
+  );
+
+  server.tool('archive_item', 'Archive a task (it can be restored later).',
+    { item_id: z.string().describe('Item ID') },
+    async ({ item_id }) => {
+      const boards = getUserBoards(userId);
+      const found = findItem(boards, item_id);
+      if (!found) throw new Error('Item not found');
+      found.item.archived_at = new Date().toISOString();
+      logEvent(userId, 'archived', found.board.id);
+      saveLocalCache();
+      return { content: [{ type: 'text', text: JSON.stringify(found.item, null, 2) }] };
+    }
+  );
+
+  server.tool('delete_item', 'Permanently delete a task.',
+    { item_id: z.string().describe('Item ID') },
+    async ({ item_id }) => {
+      const boards = getUserBoards(userId);
+      const found = findItem(boards, item_id);
+      if (!found) throw new Error('Item not found');
+      found.group.items = found.group.items.filter((i) => i.id !== item_id);
+      logEvent(userId, 'deleted', found.board.id);
+      saveLocalCache();
+      return { content: [{ type: 'text', text: JSON.stringify({ success: true }) }] };
+    }
+  );
+
+  return server;
+}
+
+// Active SSE sessions keyed by sessionId
+const mcpSessions = new Map();
+
+// GET /mcp/sse — MCP client opens SSE stream here
+app.get('/mcp/sse', async (req, res) => {
+  const username = req.headers['x-mcp-username'];
+  const password = req.headers['x-mcp-password'];
+  const user = db.users.find(
+    (u) => u.username.toLowerCase() === (username || '').toLowerCase() && u.password === password
+  );
+  if (!user) return res.status(401).json({ error: 'Invalid MCP credentials' });
+
+  const transport = new SSEServerTransport('/mcp/messages', res);
+  mcpSessions.set(transport.sessionId, transport);
+  req.on('close', () => mcpSessions.delete(transport.sessionId));
+
+  const mcpServer = createMcpServer(user.id);
+  await mcpServer.connect(transport);
+});
+
+// POST /mcp/messages — MCP client sends messages here
+app.post('/mcp/messages', async (req, res) => {
+  const { sessionId } = req.query;
+  const transport = mcpSessions.get(sessionId);
+  if (!transport) return res.status(404).json({ error: 'MCP session not found' });
+  await transport.handlePostMessage(req, res, req.body);
+});
+
 // ── Start ──────────────────────────────────────────────────────────────────
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`MiggyList server running on http://localhost:${PORT}`);
+  console.log(`MCP SSE endpoint: http://localhost:${PORT}/mcp/sse`);
 });

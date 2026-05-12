@@ -5,6 +5,8 @@ import { z } from "zod";
 const API_URL = process.env.MIGGYLIST_API_URL ?? "http://localhost:3001";
 const USERNAME = process.env.MIGGYLIST_USERNAME;
 const PASSWORD = process.env.MIGGYLIST_PASSWORD;
+const CF_CLIENT_ID = process.env.CF_ACCESS_CLIENT_ID;
+const CF_CLIENT_SECRET = process.env.CF_ACCESS_CLIENT_SECRET;
 
 if (!USERNAME || !PASSWORD) {
   process.stderr.write(
@@ -19,7 +21,7 @@ let userId;
 async function login() {
   const res = await fetch(`${API_URL}/miggylist-api/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...cfHeaders() },
     body: JSON.stringify({ username: USERNAME, password: PASSWORD }),
   });
   if (!res.ok) {
@@ -31,10 +33,19 @@ async function login() {
   return data.id;
 }
 
+function cfHeaders() {
+  if (!CF_CLIENT_ID || !CF_CLIENT_SECRET) return {};
+  return {
+    "CF-Access-Client-Id": CF_CLIENT_ID,
+    "CF-Access-Client-Secret": CF_CLIENT_SECRET,
+  };
+}
+
 function authHeaders() {
   return {
     "Content-Type": "application/json",
     "x-user-id": userId,
+    ...cfHeaders(),
   };
 }
 
