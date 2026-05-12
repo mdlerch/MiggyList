@@ -18,6 +18,8 @@ Thumbs.db
 # --- Claude Code ---
 # Ignore local machine-specific settings
 .claude/settings.local.json
+# MCP server config contains credentials — each developer creates their own
+.mcp.json
 .claude/cache/
 .claude/sessions/
 
