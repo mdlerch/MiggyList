@@ -3,20 +3,12 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 
 const API_URL = process.env.MIGGYLIST_API_URL ?? "http://localhost:3001";
-const USERNAME = process.env.MIGGYLIST_USERNAME;
-const PASSWORD = process.env.MIGGYLIST_PASSWORD;
-const CF_CLIENT_ID = process.env.CF_ACCESS_CLIENT_ID;
-const CF_CLIENT_SECRET = process.env.CF_ACCESS_CLIENT_SECRET;
-const MCP_USERNAME = process.env.MCP_USERNAME;
-const MCP_PASSWORD = process.env.MCP_PASSWORD;
 
-let userId;
-
-async function login() {
+async function login(username, password) {
   const res = await fetch(`${API_URL}/miggylist-api/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...cfHeaders() },
-    body: JSON.stringify({ username: USERNAME, password: PASSWORD }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -26,32 +18,24 @@ async function login() {
   return data.id;
 }
 
-function cfHeaders() {
-  if (!CF_CLIENT_ID || !CF_CLIENT_SECRET) return {};
-  return {
-    "CF-Access-Client-Id": CF_CLIENT_ID,
-    "CF-Access-Client-Secret": CF_CLIENT_SECRET,
-  };
-}
-
-function authHeaders() {
-  return { "Content-Type": "application/json", "x-user-id": userId, ...cfHeaders() };
-}
-
-async function api(method, path, body) {
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers: authHeaders(),
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API error ${res.status}: ${text}`);
+function buildServer(userId) {
+  function authHeaders() {
+    return { "Content-Type": "application/json", "x-user-id": userId };
   }
-  return res.json();
-}
 
-function buildServer() {
+  async function api(method, path, body) {
+    const res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: authHeaders(),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`API error ${res.status}: ${text}`);
+    }
+    return res.json();
+  }
+
   const server = new McpServer({ name: "miggylist", version: "1.0.0" });
 
   server.resource("boards", "miggylist://boards", async () => {
@@ -176,41 +160,32 @@ function buildServer() {
   return server;
 }
 
-function checkAuth(req, res) {
-  if (!MCP_USERNAME || !MCP_PASSWORD) return true;
-  const u = req.headers["x-mcp-username"];
-  const p = req.headers["x-mcp-password"];
-  if (u !== MCP_USERNAME || p !== MCP_PASSWORD) {
-    res.status(401).json({ error: "Unauthorized" });
-    return false;
-  }
-  return true;
-}
-
 export async function register(app, appName, externalBase) {
-  if (!USERNAME || !PASSWORD) {
-    process.stderr.write("Error: MIGGYLIST_USERNAME and MIGGYLIST_PASSWORD are required.\n");
-    process.exit(1);
-  }
-
-  userId = await login();
-  process.stderr.write(`[miggylist] Authenticated as user ${userId}\n`);
-
   const transports = new Map();
-  // The messages endpoint must be the path the *client* will POST to (before NGINX rewrites).
   const messagesEndpoint = `${externalBase}/${appName}/messages`;
 
   app.get(`/${appName}/sse`, async (req, res) => {
-    if (!checkAuth(req, res)) return;
+    const username = req.headers["x-mcp-username"];
+    const password = req.headers["x-mcp-password"];
+    if (!username || !password) {
+      return res.status(401).json({ error: "x-mcp-username and x-mcp-password headers required" });
+    }
+
+    let userId;
+    try {
+      userId = await login(username, password);
+    } catch (err) {
+      return res.status(401).json({ error: err.message });
+    }
+
+    process.stderr.write(`[miggylist] Client authenticated as user ${userId}\n`);
     const transport = new SSEServerTransport(messagesEndpoint, res);
     transports.set(transport.sessionId, transport);
     res.on("close", () => transports.delete(transport.sessionId));
-    const server = buildServer();
-    await server.connect(transport);
+    await buildServer(userId).connect(transport);
   });
 
   app.post(`/${appName}/messages`, async (req, res) => {
-    if (!checkAuth(req, res)) return;
     const { sessionId } = req.query;
     const transport = transports.get(sessionId);
     if (!transport) return res.status(404).send("Session not found");
