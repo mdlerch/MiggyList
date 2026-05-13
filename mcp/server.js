@@ -1,7 +1,7 @@
 import express from "express";
 import { register as registerMiggyList } from "./apps/miggylist.js";
 
-const PORT = parseInt(process.env.PORT ?? "3002");
+const PORT = parseInt(process.env.PORT ?? "3005");
 
 // The path prefix this server sits behind in NGINX (e.g. /mcp).
 // Used to build the correct messages endpoint URL sent to MCP clients.
