@@ -1,9 +1,9 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-export function buildServer(userId, apiUrl = "http://localhost:3001") {
+export function buildServer(userId, apiUrl = "http://localhost:3001", cfHeaders = {}) {
   function authHeaders() {
-    return { "Content-Type": "application/json", "x-user-id": userId };
+    return { "Content-Type": "application/json", "x-user-id": userId, ...cfHeaders };
   }
 
   async function api(method, path, body) {

@@ -6,13 +6,17 @@ const username = process.env.MIGGYLIST_USERNAME;
 const password = process.env.MIGGYLIST_PASSWORD;
 if (!username || !password) throw new Error("MIGGYLIST_USERNAME and MIGGYLIST_PASSWORD env vars required");
 
+const cfHeaders = {};
+if (process.env.CF_ACCESS_CLIENT_ID) cfHeaders["CF-Access-Client-Id"] = process.env.CF_ACCESS_CLIENT_ID;
+if (process.env.CF_ACCESS_CLIENT_SECRET) cfHeaders["CF-Access-Client-Secret"] = process.env.CF_ACCESS_CLIENT_SECRET;
+
 const loginRes = await fetch(`${API_URL}/miggylist-api/auth/login`, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", ...cfHeaders },
   body: JSON.stringify({ username, password }),
 });
 if (!loginRes.ok) throw new Error(`Auth failed: ${await loginRes.text()}`);
 const { id: userId } = await loginRes.json();
 
-const server = buildServer(userId, API_URL);
+const server = buildServer(userId, API_URL, cfHeaders);
 await server.connect(new StdioServerTransport());
