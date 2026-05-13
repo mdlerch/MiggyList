@@ -1,31 +1,13 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { randomUUID } from "crypto";
 import { z } from "zod";
 
-const API_URL = process.env.MIGGYLIST_API_URL ?? "http://localhost:3001";
-
-async function login(username, password) {
-  const res = await fetch(`${API_URL}/miggylist-api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Authentication failed (${res.status}): ${text}`);
-  }
-  const data = await res.json();
-  return data.id;
-}
-
-function buildServer(userId) {
+export function buildServer(userId, apiUrl = "http://localhost:3001") {
   function authHeaders() {
     return { "Content-Type": "application/json", "x-user-id": userId };
   }
 
   async function api(method, path, body) {
-    const res = await fetch(`${API_URL}${path}`, {
+    const res = await fetch(`${apiUrl}${path}`, {
       method,
       headers: authHeaders(),
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -159,45 +141,4 @@ function buildServer(userId) {
   );
 
   return server;
-}
-
-export async function register(app, appName) {
-  const sessions = new Map(); // sessionId -> StreamableHTTPServerTransport
-
-  async function handleMcp(req, res) {
-    const sessionId = req.headers["mcp-session-id"];
-
-    if (sessionId) {
-      const transport = sessions.get(sessionId);
-      if (!transport) return res.status(404).json({ error: "Session not found" });
-      return transport.handleRequest(req, res, req.body);
-    }
-
-    // New session — authenticate before creating it
-    const username = req.headers["x-mcp-username"];
-    const password = req.headers["x-mcp-password"];
-    if (!username || !password) {
-      return res.status(401).json({ error: "x-mcp-username and x-mcp-password headers required" });
-    }
-
-    let userId;
-    try {
-      userId = await login(username, password);
-    } catch (err) {
-      return res.status(401).json({ error: err.message });
-    }
-
-    process.stderr.write(`[miggylist] Client authenticated as user ${userId}\n`);
-
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => randomUUID() });
-    sessions.set(transport.sessionId, transport);
-    transport.onclose = () => sessions.delete(transport.sessionId);
-
-    await buildServer(userId).connect(transport);
-    await transport.handleRequest(req, res, req.body);
-  }
-
-  app.post(`/${appName}/mcp`, handleMcp);
-  app.get(`/${appName}/mcp`, handleMcp);
-  app.delete(`/${appName}/mcp`, handleMcp);
 }

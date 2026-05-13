@@ -1,15 +1,18 @@
-import express from "express";
-import { register as registerMiggyList } from "./apps/miggylist.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { buildServer } from "./apps/miggylist.js";
 
-const PORT = parseInt(process.env.PORT ?? "3005");
+const API_URL = process.env.MIGGYLIST_API_URL ?? "http://localhost:3001";
+const username = process.env.MIGGYLIST_USERNAME;
+const password = process.env.MIGGYLIST_PASSWORD;
+if (!username || !password) throw new Error("MIGGYLIST_USERNAME and MIGGYLIST_PASSWORD env vars required");
 
-const app = express();
-app.use(express.json());
-
-// Register MCP apps — add new ones here as needed:
-await registerMiggyList(app, "miggylist");
-// await registerOtherApp(app, "otherapp");
-
-app.listen(PORT, () => {
-  process.stderr.write(`MCP server listening on port ${PORT}\n`);
+const loginRes = await fetch(`${API_URL}/miggylist-api/auth/login`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ username, password }),
 });
+if (!loginRes.ok) throw new Error(`Auth failed: ${await loginRes.text()}`);
+const { id: userId } = await loginRes.json();
+
+const server = buildServer(userId, API_URL);
+await server.connect(new StdioServerTransport());
