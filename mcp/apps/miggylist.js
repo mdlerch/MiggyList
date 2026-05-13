@@ -1,5 +1,6 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { randomUUID } from "crypto";
 import { z } from "zod";
 
 const API_URL = process.env.MIGGYLIST_API_URL ?? "http://localhost:3001";
@@ -160,11 +161,19 @@ function buildServer(userId) {
   return server;
 }
 
-export async function register(app, appName, externalBase) {
-  const transports = new Map();
-  const messagesEndpoint = `${externalBase}/${appName}/messages`;
+export async function register(app, appName) {
+  const sessions = new Map(); // sessionId -> StreamableHTTPServerTransport
 
-  app.get(`/${appName}/sse`, async (req, res) => {
+  async function handleMcp(req, res) {
+    const sessionId = req.headers["mcp-session-id"];
+
+    if (sessionId) {
+      const transport = sessions.get(sessionId);
+      if (!transport) return res.status(404).json({ error: "Session not found" });
+      return transport.handleRequest(req, res, req.body);
+    }
+
+    // New session — authenticate before creating it
     const username = req.headers["x-mcp-username"];
     const password = req.headers["x-mcp-password"];
     if (!username || !password) {
@@ -179,16 +188,16 @@ export async function register(app, appName, externalBase) {
     }
 
     process.stderr.write(`[miggylist] Client authenticated as user ${userId}\n`);
-    const transport = new SSEServerTransport(messagesEndpoint, res);
-    transports.set(transport.sessionId, transport);
-    res.on("close", () => transports.delete(transport.sessionId));
-    await buildServer(userId).connect(transport);
-  });
 
-  app.post(`/${appName}/messages`, async (req, res) => {
-    const { sessionId } = req.query;
-    const transport = transports.get(sessionId);
-    if (!transport) return res.status(404).send("Session not found");
-    await transport.handlePostMessage(req, res);
-  });
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => randomUUID() });
+    sessions.set(transport.sessionId, transport);
+    transport.onclose = () => sessions.delete(transport.sessionId);
+
+    await buildServer(userId).connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  }
+
+  app.post(`/${appName}/mcp`, handleMcp);
+  app.get(`/${appName}/mcp`, handleMcp);
+  app.delete(`/${appName}/mcp`, handleMcp);
 }
