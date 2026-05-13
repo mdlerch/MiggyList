@@ -42,6 +42,26 @@ function formatMinutes(mins) {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
+function parseTimeInput(val) {
+  const s = val.trim().toLowerCase();
+  if (!s) return null;
+  // 1h05, 1h5m, 1h 5m, 1h 5
+  const hm = s.match(/^(\d+)\s*h\s*(\d+)m?$/);
+  if (hm) return parseInt(hm[1]) * 60 + parseInt(hm[2]);
+  // 1h, 2h
+  const h = s.match(/^(\d+)\s*h$/);
+  if (h) return parseInt(h[1]) * 60;
+  // 1:05, 1:5
+  const colon = s.match(/^(\d+):(\d+)$/);
+  if (colon) return parseInt(colon[1]) * 60 + parseInt(colon[2]);
+  // 30m, 90m
+  const m = s.match(/^(\d+)\s*m$/);
+  if (m) return parseInt(m[1]);
+  // plain number = minutes
+  if (/^\d+$/.test(s)) return parseInt(s);
+  return null;
+}
+
 // Strip markdown syntax for plain-text preview
 function stripMarkdown(md) {
   if (!md) return '';
@@ -83,13 +103,17 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
   // Points handlers
   function commitPoints() {
     const v = pointsVal.trim();
-    const n = v === '' ? null : parseInt(v, 10);
-    const valid = n === null || (Number.isInteger(n) && n > 0);
-    if (valid) {
-      onUpdate({ points: n });
-      setPointsVal(n != null ? String(n) : '');
+    if (v === '') {
+      onUpdate({ points: null });
+      setPointsVal('');
     } else {
-      setPointsVal(item.points != null ? String(item.points) : '');
+      const n = parseTimeInput(v);
+      if (n !== null && n > 0) {
+        onUpdate({ points: n });
+        setPointsVal(String(n));
+      } else {
+        setPointsVal(item.points != null ? String(item.points) : '');
+      }
     }
     setEditingPoints(false);
   }
@@ -249,15 +273,13 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
         {editingPoints ? (
           <input
             autoFocus
-            type="number"
-            min="1"
-            step="1"
+            type="text"
             className="points-input"
             value={pointsVal}
             onChange={(e) => setPointsVal(e.target.value)}
             onBlur={commitPoints}
             onKeyDown={pointsKeyDown}
-            placeholder="min"
+            placeholder="30m / 1h"
           />
         ) : (
           <span

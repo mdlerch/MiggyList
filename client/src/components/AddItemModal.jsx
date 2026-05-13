@@ -1,5 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+function parseTimeInput(val) {
+  const s = val.trim().toLowerCase();
+  if (!s) return null;
+  const hm = s.match(/^(\d+)\s*h\s*(\d+)m?$/);
+  if (hm) return parseInt(hm[1]) * 60 + parseInt(hm[2]);
+  const h = s.match(/^(\d+)\s*h$/);
+  if (h) return parseInt(h[1]) * 60;
+  const colon = s.match(/^(\d+):(\d+)$/);
+  if (colon) return parseInt(colon[1]) * 60 + parseInt(colon[2]);
+  const m = s.match(/^(\d+)\s*m$/);
+  if (m) return parseInt(m[1]);
+  if (/^\d+$/.test(s)) return parseInt(s);
+  return null;
+}
+
 const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 
 export default function AddItemModal({ onSubmit, onClose, initialDueDate }) {
@@ -32,7 +47,7 @@ export default function AddItemModal({ onSubmit, onClose, initialDueDate }) {
       titleRef.current?.focus();
       return;
     }
-    const points = form.points !== '' ? parseInt(form.points, 10) : null;
+    const points = form.points !== '' ? parseTimeInput(form.points) : null;
     onSubmit({ ...form, title, points: points && points > 0 ? points : null });
   }
 
@@ -96,10 +111,8 @@ export default function AddItemModal({ onSubmit, onClose, initialDueDate }) {
                 <input
                   id="item-points"
                   name="points"
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="min"
+                  type="text"
+                  placeholder="30m / 1h"
                   value={form.points}
                   onChange={handleChange}
                 />
