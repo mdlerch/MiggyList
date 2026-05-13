@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 
+function formatMinutes(mins) {
+  if (mins == null || mins === 0) return '0m';
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
 const METRICS = [
   { key: 'created',   label: 'Created',   color: '#0073ea' },
   { key: 'completed', label: 'Completed', color: '#00c875' },
@@ -341,19 +349,19 @@ export default function StatisticsModal({ boardId, boardName, userId, onClose })
                 </div>
               )}
 
-              {/* Points */}
+              {/* Time estimates */}
               {data.boardSnapshot && (data.boardSnapshot.pointsTotal > 0 || data.boardSnapshot.pointsCompleted > 0) && (
                 <div className="stats-points-section">
-                  <div className="stats-chart-title">Points</div>
+                  <div className="stats-chart-title">Time Estimates</div>
                   <div className="stats-points-row">
                     <div className="stats-points-card">
-                      <div className="stats-points-value">{data.boardSnapshot.pointsTotal}</div>
-                      <div className="stats-points-label">Created</div>
+                      <div className="stats-points-value">{formatMinutes(data.boardSnapshot.pointsTotal)}</div>
+                      <div className="stats-points-label">Total</div>
                     </div>
                     <div className="stats-points-divider" />
                     <div className="stats-points-card">
-                      <div className="stats-points-value" style={{ color: '#00c875' }}>{data.boardSnapshot.pointsCompleted}</div>
-                      <div className="stats-points-label">Completed</div>
+                      <div className="stats-points-value" style={{ color: '#00c875' }}>{formatMinutes(data.boardSnapshot.pointsCompleted)}</div>
+                      <div className="stats-points-label">Done</div>
                     </div>
                     <div className="stats-points-divider" />
                     <div className="stats-points-card">

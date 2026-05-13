@@ -79,7 +79,7 @@ export function buildServer(userId, apiUrl = "http://localhost:3001", cfHeaders 
       priority: z.enum(["Low", "Medium", "High", "Critical"]).optional().describe(`Priority. One of: ${PRIORITY_VALUES.join(", ")}. Defaults to Medium.`),
       due_date: z.string().optional().describe("Due date (YYYY-MM-DD)"),
       description: z.string().optional().describe("Task description (markdown supported)"),
-      points: z.number().int().optional().describe("Story points (integer)"),
+      points: z.number().int().optional().describe("Time estimate in minutes (integer, e.g. 10, 30, 60, 120)"),
     },
     async ({ board_id, group_id, title, status, priority, due_date, description, points }) => {
       const item = await api("POST", `/miggylist-api/boards/${board_id}/groups/${group_id}/items`, { title, status, priority, due_date, description, points });

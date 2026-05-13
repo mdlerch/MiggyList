@@ -291,7 +291,7 @@ export default function Group({
               <th className="col-desc"></th>
               <th className="col-status">Status</th>
               <th className="col-due">Due Date</th>
-              <th className="col-points">Points</th>
+              <th className="col-points">Time</th>
               <th className="col-delegate">Delegate</th>
               <th className="col-actions"></th>
             </tr>

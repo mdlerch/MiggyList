@@ -63,6 +63,27 @@ for (const userId of Object.keys(db.boards)) {
 }
 if (_migrated) { saveLocalCache(); console.log('Migrated item statuses to new labels'); }
 
+// ── Points → minutes migration ───────────────────────────────────────────────
+if (!db.migrations) db.migrations = {};
+if (!db.migrations.pointsToMinutes) {
+  const POINTS_TO_MINUTES = { 1: 10, 2: 30, 3: 60, 4: 90, 5: 120, 6: 150, 7: 180, 8: 240 };
+  for (const userId of Object.keys(db.boards)) {
+    for (const board of db.boards[userId] || []) {
+      for (const group of board.groups || []) {
+        for (const item of group.items || []) {
+          if (item.points != null && item.points > 0) {
+            const mapped = POINTS_TO_MINUTES[item.points];
+            item.points = mapped !== undefined ? mapped : Math.round(item.points * 30);
+          }
+        }
+      }
+    }
+  }
+  db.migrations.pointsToMinutes = true;
+  saveLocalCache();
+  console.log('Migrated item points to minutes');
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function getUserBoards(userId) {
   if (!db.boards[userId]) db.boards[userId] = [];

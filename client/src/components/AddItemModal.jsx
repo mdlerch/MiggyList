@@ -92,14 +92,14 @@ export default function AddItemModal({ onSubmit, onClose, initialDueDate }) {
                 />
               </div>
               <div className="form-field">
-                <label htmlFor="item-points">Points</label>
+                <label htmlFor="item-points">Time (min)</label>
                 <input
                   id="item-points"
                   name="points"
                   type="number"
                   min="1"
                   step="1"
-                  placeholder="—"
+                  placeholder="min"
                   value={form.points}
                   onChange={handleChange}
                 />

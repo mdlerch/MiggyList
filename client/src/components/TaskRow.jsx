@@ -34,6 +34,14 @@ function dateStatus(dateStr) {
   return '';
 }
 
+function formatMinutes(mins) {
+  if (mins == null) return null;
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
 // Strip markdown syntax for plain-text preview
 function stripMarkdown(md) {
   if (!md) return '';
@@ -236,7 +244,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
         )}
       </td>
 
-      {/* Points */}
+      {/* Time estimate */}
       <td className="col-points">
         {editingPoints ? (
           <input
@@ -249,14 +257,15 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
             onChange={(e) => setPointsVal(e.target.value)}
             onBlur={commitPoints}
             onKeyDown={pointsKeyDown}
+            placeholder="min"
           />
         ) : (
           <span
             className="points-text"
             onClick={() => setEditingPoints(true)}
-            title="Click to edit"
+            title="Click to edit (enter minutes)"
           >
-            {item.points != null ? item.points : <em style={{ color: '#c4c4c4', fontStyle: 'normal' }}>—</em>}
+            {item.points != null ? formatMinutes(item.points) : <em style={{ color: '#c4c4c4', fontStyle: 'normal' }}>—</em>}
           </span>
         )}
       </td>
