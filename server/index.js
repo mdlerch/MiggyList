@@ -14,6 +14,30 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ── Group rule helpers ──────────────────────────────────────────────────────
+function nextDayOfWeek(day) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = (day - today.getDay() + 7) % 7 || 7;
+  const result = new Date(today);
+  result.setDate(today.getDate() + diff);
+  return result.toISOString().slice(0, 10);
+}
+
+function computeAutoDueDate(group) {
+  switch (group.rules?.auto_due_date) {
+    case 'today': return new Date().toISOString().slice(0, 10);
+    case 'next-sunday': return nextDayOfWeek(0);
+    case 'next-monday': return nextDayOfWeek(1);
+    case '2-weeks': {
+      const d = new Date();
+      d.setDate(d.getDate() + 14);
+      return d.toISOString().slice(0, 10);
+    }
+    default: return '';
+  }
+}
+
 // ── Persistence helpers ─────────────────────────────────────────────────────
 const DB_PATH = path.join(__dirname, 'db.json');
 
@@ -296,7 +320,7 @@ app.post('/miggylist-api/boards/:id/groups/:groupId/items', requireAuth, (req, r
     status: status || 'Inbox',
     priority: priority || 'Medium',
     assignee: assignee || '',
-    due_date: due_date || '',
+    due_date: due_date || computeAutoDueDate(group),
     description: description || '',
     points: parsedPoints && parsedPoints > 0 ? parsedPoints : null,
   };
@@ -638,7 +662,7 @@ function createMcpServer(userId) {
         status: status || 'Inbox',
         priority: priority || 'Medium',
         assignee: '',
-        due_date: due_date || '',
+        due_date: due_date || computeAutoDueDate(group),
         description: description || '',
         points: parsedPoints && parsedPoints > 0 ? parsedPoints : null,
       };
