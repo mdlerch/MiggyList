@@ -59,6 +59,7 @@ export default function Group({
   onArchiveItem,
   onDeleteGroup,
   onUpdateGroup,
+  onApplyStatusMoveRule,
   dropTarget,
   draggingId,
   onItemDragStart,
@@ -275,6 +276,8 @@ export default function Group({
           group={group}
           onSave={(rules) => onUpdateGroup(group.id, { rules })}
           onClose={() => setRulesOpen(false)}
+          onApplyDueDateRule={(date) => group.items.forEach((item) => onUpdateItem(item.id, { due_date: date }))}
+          onApplyStatusMoveRule={onApplyStatusMoveRule}
         />
       )}
 

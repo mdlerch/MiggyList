@@ -631,6 +631,18 @@ html, body, #root {
   color: var(--sidebar-accent);
 }
 
+.rules-apply-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rules-apply-btn {
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 5px 12px;
+}
+
 .rules-status-list {
   display: flex;
   flex-direction: column;

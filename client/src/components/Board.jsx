@@ -122,6 +122,18 @@ export default function Board({
     }
   }
 
+  async function handleApplyStatusMoveRule(groupId, statuses) {
+    const statusSet = new Set(statuses);
+    let appendIdx = board.groups.find((g) => g.id === groupId)?.items.length ?? 0;
+    for (const group of board.groups) {
+      if (group.id === groupId) continue;
+      const itemsToMove = group.items.filter((i) => statusSet.has(i.status));
+      for (const item of itemsToMove) {
+        await onMoveItem(item.id, group.id, groupId, appendIdx++);
+      }
+    }
+  }
+
   async function handleBulkUpdateStatus(status) {
     await Promise.all([...selectedIds].map((id) => handleUpdateItemWithRules(id, { status })));
     setSelectedIds(new Set());
@@ -416,6 +428,7 @@ export default function Board({
                 onArchiveItem={onArchiveItem}
                 onDeleteGroup={onDeleteGroup}
                 onUpdateGroup={onUpdateGroup}
+                onApplyStatusMoveRule={(statuses) => handleApplyStatusMoveRule(group.id, statuses)}
                 dropTarget={draggingGroupId ? null : dropTarget}
                 draggingId={draggingGroupId ? null : draggingId}
                 onItemDragStart={handleItemDragStart}

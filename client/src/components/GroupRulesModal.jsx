@@ -10,7 +10,30 @@ const DUE_DATE_OPTIONS = [
 
 const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 
-export default function GroupRulesModal({ group, onSave, onClose }) {
+function nextDayOfWeek(day) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = (day - today.getDay() + 7) % 7 || 7;
+  const result = new Date(today);
+  result.setDate(today.getDate() + diff);
+  return result.toISOString().slice(0, 10);
+}
+
+function computeDate(rule) {
+  switch (rule) {
+    case 'today': return new Date().toISOString().slice(0, 10);
+    case 'next-sunday': return nextDayOfWeek(0);
+    case 'next-monday': return nextDayOfWeek(1);
+    case '2-weeks': {
+      const d = new Date();
+      d.setDate(d.getDate() + 14);
+      return d.toISOString().slice(0, 10);
+    }
+    default: return null;
+  }
+}
+
+export default function GroupRulesModal({ group, onSave, onClose, onApplyDueDateRule, onApplyStatusMoveRule }) {
   const [autoDueDate, setAutoDueDate] = useState(group.rules?.auto_due_date || '');
   const [onStatusMoveHere, setOnStatusMoveHere] = useState(
     () => new Set(group.rules?.on_status_move_here || [])
@@ -38,6 +61,15 @@ export default function GroupRulesModal({ group, onSave, onClose }) {
     onClose();
   }
 
+  function handleApplyDueDate() {
+    const date = computeDate(autoDueDate);
+    if (date) onApplyDueDateRule(date);
+  }
+
+  function handleApplyStatusMove() {
+    onApplyStatusMoveRule([...onStatusMoveHere]);
+  }
+
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="rules-modal-title">
@@ -53,15 +85,22 @@ export default function GroupRulesModal({ group, onSave, onClose }) {
         <div className="modal-body">
           <div className="form-field">
             <label htmlFor="auto-due-date">Auto due date for new items</label>
-            <select
-              id="auto-due-date"
-              value={autoDueDate}
-              onChange={(e) => setAutoDueDate(e.target.value)}
-            >
-              {DUE_DATE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <div className="rules-apply-row">
+              <select
+                id="auto-due-date"
+                value={autoDueDate}
+                onChange={(e) => setAutoDueDate(e.target.value)}
+              >
+                {DUE_DATE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              {autoDueDate && (
+                <button type="button" className="btn btn-secondary rules-apply-btn" onClick={handleApplyDueDate}>
+                  Apply now
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="form-field">
@@ -78,6 +117,11 @@ export default function GroupRulesModal({ group, onSave, onClose }) {
                 </label>
               ))}
             </div>
+            {onStatusMoveHere.size > 0 && (
+              <button type="button" className="btn btn-secondary rules-apply-btn" onClick={handleApplyStatusMove}>
+                Apply now
+              </button>
+            )}
           </div>
         </div>
 
