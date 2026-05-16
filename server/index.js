@@ -309,7 +309,7 @@ app.post('/miggylist-api/boards/:id/groups/:groupId/items', requireAuth, (req, r
   const group = board.groups.find((g) => g.id === req.params.groupId);
   if (!group) return res.status(404).json({ error: 'Group not found' });
 
-  const { title, status, priority, assignee, due_date, description, points } = req.body;
+  const { title, status, priority, assignee, due_date, description, prompt, points } = req.body;
   if (!title) return res.status(400).json({ error: 'title required' });
 
   const parsedPoints = points !== undefined && points !== null && points !== '' ? parseInt(points, 10) : null;
@@ -322,6 +322,7 @@ app.post('/miggylist-api/boards/:id/groups/:groupId/items', requireAuth, (req, r
     assignee: assignee || '',
     due_date: due_date || computeAutoDueDate(group),
     description: description || '',
+    prompt: prompt || '',
     points: parsedPoints && parsedPoints > 0 ? parsedPoints : null,
   };
   group.items.push(item);
@@ -354,6 +355,7 @@ app.post('/miggylist-api/boards/import', requireAuth, (req, res) => {
         assignee: i.assignee || '',
         due_date: i.due_date || '',
         description: i.description || '',
+        prompt: i.prompt || '',
         points: i.points && i.points > 0 ? parseInt(i.points, 10) : null,
       })),
     })),
@@ -369,7 +371,7 @@ app.put('/miggylist-api/items/:id', requireAuth, (req, res) => {
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
   const { item, board } = found;
-  const { title, status, priority, assignee, due_date, description, delegated_to, points } = req.body;
+  const { title, status, priority, assignee, due_date, description, prompt, delegated_to, points } = req.body;
   const prevStatus = item.status;
   const wasDelegated = item.delegated_to !== null && item.delegated_to !== undefined;
   if (title !== undefined) item.title = title;
@@ -378,6 +380,7 @@ app.put('/miggylist-api/items/:id', requireAuth, (req, res) => {
   if (assignee !== undefined) item.assignee = assignee;
   if (due_date !== undefined) item.due_date = due_date;
   if (description !== undefined) item.description = description;
+  if (prompt !== undefined) item.prompt = prompt;
   if (delegated_to !== undefined) item.delegated_to = delegated_to;
   if (points !== undefined) {
     const p = points !== null && points !== '' ? parseInt(points, 10) : null;
@@ -647,9 +650,10 @@ function createMcpServer(userId) {
         .describe(`Priority. One of: ${PRIORITY_VALUES.join(', ')}. Defaults to Medium.`),
       due_date: z.string().optional().describe('Due date (YYYY-MM-DD)'),
       description: z.string().optional().describe('Task description (markdown supported)'),
+      prompt: z.string().optional().describe('AI/LLM prompt for agent execution of this task'),
       points: z.number().int().optional().describe('Story points (integer)'),
     },
-    async ({ board_id, group_id, title, status, priority, due_date, description, points }) => {
+    async ({ board_id, group_id, title, status, priority, due_date, description, prompt, points }) => {
       const boards = getUserBoards(userId);
       const board = boards.find((b) => b.id === board_id);
       if (!board) throw new Error('Board not found');
@@ -664,6 +668,7 @@ function createMcpServer(userId) {
         assignee: '',
         due_date: due_date || computeAutoDueDate(group),
         description: description || '',
+        prompt: prompt || '',
         points: parsedPoints && parsedPoints > 0 ? parsedPoints : null,
       };
       group.items.push(item);
@@ -683,6 +688,7 @@ function createMcpServer(userId) {
         .describe(`New priority. One of: ${PRIORITY_VALUES.join(', ')}`),
       due_date: z.string().optional().describe('Due date (YYYY-MM-DD), or empty string to clear'),
       description: z.string().optional().describe('Task description (markdown supported)'),
+      prompt: z.string().optional().describe('AI/LLM prompt for agent execution of this task'),
       points: z.number().int().nullable().optional().describe('Story points, or null to clear'),
       delegated_to: z.string().nullable().optional().describe('Person this is delegated to, or null to clear'),
     },
@@ -698,6 +704,7 @@ function createMcpServer(userId) {
       if (fields.priority !== undefined) item.priority = fields.priority;
       if (fields.due_date !== undefined) item.due_date = fields.due_date;
       if (fields.description !== undefined) item.description = fields.description;
+      if (fields.prompt !== undefined) item.prompt = fields.prompt;
       if (fields.delegated_to !== undefined) item.delegated_to = fields.delegated_to;
       if (fields.points !== undefined) {
         const p = fields.points !== null ? parseInt(fields.points, 10) : null;

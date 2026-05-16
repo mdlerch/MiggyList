@@ -738,6 +738,7 @@ html, body, #root {
 .col-drag    { width: 24px; padding: 0 !important; text-align: center; }
 .col-name    { width: auto; min-width: 280px; }
 .col-desc    { width: 36px; text-align: center; padding-left: 0 !important; padding-right: 0 !important; }
+.col-prompt  { width: 36px; text-align: center; padding-left: 0 !important; padding-right: 0 !important; }
 .col-status  { width: 140px; }
 .col-priority{ width: 120px; }
 .col-assignee{ width: 150px; }
@@ -1503,6 +1504,29 @@ html, body, #root {
 .desc-trigger:hover {
   background: #e8f0fe;
   color: var(--sidebar-accent);
+}
+
+/* ── AI Prompt trigger button ─────────────────────────────────────────────── */
+.prompt-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  color: #9fa0ac;
+  transition: color var(--transition), background var(--transition);
+}
+
+.prompt-trigger.has-prompt {
+  color: #7c3aed;
+}
+
+.prompt-trigger:hover {
+  background: #ede9fe;
+  color: #7c3aed;
 }
 
 /* Inline plain-text preview under task name */

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import DescriptionModal from './DescriptionModal.jsx';
+import PromptModal from './PromptModal.jsx';
 import DelegateModal from './DelegateModal.jsx';
 
 const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
@@ -83,6 +84,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
   const [titleVal, setTitleVal] = useState(item.title);
   const [descOpen, setDescOpen] = useState(false);
 
+  const [promptOpen, setPromptOpen] = useState(false);
   const [editingDue, setEditingDue] = useState(false);
   const [editingPoints, setEditingPoints] = useState(false);
   const [pointsVal, setPointsVal] = useState(item.points != null ? String(item.points) : '');
@@ -131,6 +133,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
 
   const descPreview = stripMarkdown(item.description);
   const hasDesc = !!item.description;
+  const hasPrompt = !!item.prompt;
   const isDelegated = item.delegated_to !== null && item.delegated_to !== undefined;
 
   return (
@@ -210,6 +213,24 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
             <rect x="1.5" y="1.5" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.3"/>
             <path d="M3.5 4.5h6M3.5 6.5h6M3.5 8.5h4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </td>
+
+      {/* AI Prompt icon */}
+      <td className="col-prompt">
+        <button
+          className={`prompt-trigger${hasPrompt ? ' has-prompt' : ''}`}
+          title={hasPrompt ? 'Edit AI prompt' : 'Add AI prompt'}
+          onClick={() => setPromptOpen(true)}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <rect x="1.5" y="3.5" width="10" height="7.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+            <path d="M6.5 3.5V1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            <circle cx="6.5" cy="1" r="0.8" fill="currentColor"/>
+            <circle cx="4.5" cy="6.5" r="1" fill="currentColor"/>
+            <circle cx="8.5" cy="6.5" r="1" fill="currentColor"/>
+            <rect x="4" y="9" width="5" height="1.5" rx="0.4" stroke="currentColor" strokeWidth="1"/>
           </svg>
         </button>
       </td>
@@ -357,6 +378,13 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
         item={item}
         onSave={(description) => onUpdate({ description })}
         onClose={() => setDescOpen(false)}
+      />
+    )}
+    {promptOpen && (
+      <PromptModal
+        item={item}
+        onSave={(prompt) => onUpdate({ prompt })}
+        onClose={() => setPromptOpen(false)}
       />
     )}
     {delegateModalOpen && (

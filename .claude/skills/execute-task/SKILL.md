@@ -27,13 +27,18 @@ The user is a product manager at a software company. Tasks are rarely about writ
    - **Outline or plan** — structure for something larger, not the full thing yet
    - **Action list** — concrete next steps broken down from a broader goal
 
-4. **Ask one clarifying question if critical information is missing** — only block on something that would make the draft wrong, not just incomplete. If "done when" is absent or vague, make a reasonable assumption and proceed. State the assumption explicitly.
+4. **Check if a prompt already exists** — if `item.prompt` is non-empty, that is the explicit instruction for what to produce. Use it as your primary directive, supplemented by the description for context.
 
-5. **Produce the first draft** — write the artifact in full. Do not produce a meta-description of what you would write. Write the actual thing.
+5. **Ask one clarifying question if critical information is missing** — only block on something that would make the draft wrong, not just incomplete. If "done when" is absent or vague, make a reasonable assumption and proceed. State the assumption explicitly.
 
-6. **Close with a short note** — one or two sentences on key assumptions made and any open questions the user should address before this is final.
+6. **Produce the first draft** — write the artifact in full. Do not produce a meta-description of what you would write. Write the actual thing.
 
-7. **Offer to update the task** — ask if the user wants to mark the task `In Progress` (if it isn't already) or update the description with any new context that emerged.
+7. **Close with a short note** — one or two sentences on key assumptions made and any open questions the user should address before this is final.
+
+8. **Offer to update the task** — ask if the user wants to:
+   - Mark the task `In Progress` (if it isn't already)
+   - Update the description with any new context that emerged
+   - Write a refined prompt to the task's `prompt` field via `mcp__miggylist__update_item` — useful when the right prompt for a downstream agent became clear during this session and should be saved for later handoff
 
 ## Principles
 
@@ -42,3 +47,4 @@ The user is a product manager at a software company. Tasks are rarely about writ
 - If the description is thin, do your best with what's there. Note the gaps at the end rather than blocking on them upfront.
 - Do not summarize the task back to the user before producing the draft. Get to the artifact.
 - Keep the closing note short — it is scaffolding, not content.
+- The `prompt` field is the handoff artifact — it holds the instruction that will be given to a downstream agent. When you write or refine it, make it self-contained: the downstream agent will not have conversation history, only the prompt and whatever context you embed in it.

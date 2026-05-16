@@ -292,6 +292,7 @@ export default function Group({
                 Task Name
               </th>
               <th className="col-desc"></th>
+              <th className="col-prompt"></th>
               <th className="col-status">Status</th>
               <th className="col-due">Due Date</th>
               <th className="col-points">Time</th>
