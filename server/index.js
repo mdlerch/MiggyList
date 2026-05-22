@@ -48,64 +48,12 @@ function saveLocalCache() {
 // ── Load or initialise DB ───────────────────────────────────────────────────
 let db;
 if (fs.existsSync(DB_PATH)) {
-  const raw = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-  // Migrate old format (plain array) to multi-user format
-  if (Array.isArray(raw)) {
-    console.log('Old single-user db.json detected — migrating to multi-user format');
-    const smithId = 'user-smith';
-    db = {
-      users: [{ id: smithId, username: 'smith', password: 'tree' }],
-      boards: { [smithId]: raw },
-      stats: {},
-    };
-    saveLocalCache();
-  } else {
-    db = raw;
-    if (!db.stats) db.stats = {};
-    console.log(`Loaded ${db.users.length} user(s) from db.json`);
-  }
+  db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+  console.log(`Loaded ${db.users.length} user(s) from db.json`);
 } else {
   db = { users: [], boards: {}, stats: {} };
   saveLocalCache();
   console.log('db.json not found — created empty multi-user database');
-}
-
-// ── Status migration ────────────────────────────────────────────────────────
-const STATUS_MIGRATION = { 'Not started': 'Inbox', 'Not Started': 'Inbox', 'Working on it': 'In Progress', 'Stuck': 'Slog' };
-let _migrated = false;
-for (const userId of Object.keys(db.boards)) {
-  for (const board of db.boards[userId] || []) {
-    for (const group of board.groups || []) {
-      for (const item of group.items || []) {
-        if (STATUS_MIGRATION[item.status]) {
-          item.status = STATUS_MIGRATION[item.status];
-          _migrated = true;
-        }
-      }
-    }
-  }
-}
-if (_migrated) { saveLocalCache(); console.log('Migrated item statuses to new labels'); }
-
-// ── Points → minutes migration ───────────────────────────────────────────────
-if (!db.migrations) db.migrations = {};
-if (!db.migrations.pointsToMinutes) {
-  const POINTS_TO_MINUTES = { 1: 10, 2: 30, 3: 60, 4: 90, 5: 120, 6: 150, 7: 180, 8: 240 };
-  for (const userId of Object.keys(db.boards)) {
-    for (const board of db.boards[userId] || []) {
-      for (const group of board.groups || []) {
-        for (const item of group.items || []) {
-          if (item.points != null && item.points > 0) {
-            const mapped = POINTS_TO_MINUTES[item.points];
-            item.points = mapped !== undefined ? mapped : Math.round(item.points * 30);
-          }
-        }
-      }
-    }
-  }
-  db.migrations.pointsToMinutes = true;
-  saveLocalCache();
-  console.log('Migrated item points to minutes');
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -135,9 +83,9 @@ function findGroup(boards, groupId) {
 // ── Stats helper ─────────────────────────────────────────────────────────────
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
-function logEvent(userId, type, boardId) {
+function logEvent(userId, type, boardId, extra = {}) {
   if (!db.stats[userId]) db.stats[userId] = [];
-  db.stats[userId].push({ type, boardId, ts: new Date().toISOString() });
+  db.stats[userId].push({ type, boardId, ts: new Date().toISOString(), ...extra });
   // Prune events older than 90 days to cap storage growth
   const cutoff = Date.now() - NINETY_DAYS_MS;
   db.stats[userId] = db.stats[userId].filter((e) => new Date(e.ts).getTime() > cutoff);
@@ -386,7 +334,7 @@ app.put('/miggylist-api/items/:id', requireAuth, (req, res) => {
     const p = points !== null && points !== '' ? parseInt(points, 10) : null;
     item.points = p && p > 0 ? p : null;
   }
-  if (status === 'Done' && prevStatus !== 'Done') logEvent(req.userId, 'completed', board.id);
+  if (status === 'Done' && prevStatus !== 'Done') logEvent(req.userId, 'completed', board.id, { points: item.points || 0 });
   if (delegated_to !== undefined && delegated_to !== null && !wasDelegated) logEvent(req.userId, 'delegated', board.id);
   saveLocalCache();
   res.json(item);
@@ -526,11 +474,13 @@ app.get('/miggylist-api/stats', requireAuth, (req, res) => {
   const events = boardId ? allEvents.filter((e) => e.boardId === boardId) : allEvents;
 
   function countTypes(evts) {
+    const completedEvts = evts.filter((e) => e.type === 'completed');
     return {
-      created:   evts.filter((e) => e.type === 'created').length,
-      completed: evts.filter((e) => e.type === 'completed').length,
-      removed:   evts.filter((e) => e.type === 'archived' || e.type === 'deleted').length,
-      delegated: evts.filter((e) => e.type === 'delegated').length,
+      created:         evts.filter((e) => e.type === 'created').length,
+      completed:       completedEvts.length,
+      removed:         evts.filter((e) => e.type === 'archived' || e.type === 'deleted').length,
+      delegated:       evts.filter((e) => e.type === 'delegated').length,
+      pointsCompleted: completedEvts.reduce((s, e) => s + (e.points || 0), 0),
     };
   }
 
@@ -710,7 +660,7 @@ function createMcpServer(userId) {
         const p = fields.points !== null ? parseInt(fields.points, 10) : null;
         item.points = p && p > 0 ? p : null;
       }
-      if (fields.status === 'Done' && prevStatus !== 'Done') logEvent(userId, 'completed', board.id);
+      if (fields.status === 'Done' && prevStatus !== 'Done') logEvent(userId, 'completed', board.id, { points: item.points || 0 });
       if (fields.delegated_to !== undefined && fields.delegated_to !== null && !wasDelegated) logEvent(userId, 'delegated', board.id);
       saveLocalCache();
       return { content: [{ type: 'text', text: JSON.stringify(item, null, 2) }] };

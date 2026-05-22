@@ -227,6 +227,7 @@ export default function StatisticsModal({ boardId, boardName, userId, onClose })
     ? data.today
     : data.daily.reduce((acc, d) => {
         METRICS.forEach((m) => { acc[m.key] = (acc[m.key] || 0) + (d[m.key] || 0); });
+        acc.pointsCompleted = (acc.pointsCompleted || 0) + (d.pointsCompleted || 0);
         return acc;
       }, {});
 
@@ -350,27 +351,29 @@ export default function StatisticsModal({ boardId, boardName, userId, onClose })
               )}
 
               {/* Time estimates */}
-              {data.boardSnapshot && (data.boardSnapshot.pointsTotal > 0 || data.boardSnapshot.pointsCompleted > 0) && (
+              {data.boardSnapshot && (data.boardSnapshot.pointsTotal > 0 || (summaryData && summaryData.pointsCompleted > 0)) && (
                 <div className="stats-points-section">
                   <div className="stats-chart-title">Time Estimates</div>
                   <div className="stats-points-row">
                     <div className="stats-points-card">
                       <div className="stats-points-value">{formatMinutes(data.boardSnapshot.pointsTotal)}</div>
-                      <div className="stats-points-label">Total</div>
+                      <div className="stats-points-label">Board Total</div>
                     </div>
                     <div className="stats-points-divider" />
                     <div className="stats-points-card">
-                      <div className="stats-points-value" style={{ color: '#00c875' }}>{formatMinutes(data.boardSnapshot.pointsCompleted)}</div>
-                      <div className="stats-points-label">Done</div>
+                      <div className="stats-points-value" style={{ color: '#00c875' }}>
+                        {formatMinutes(summaryData?.pointsCompleted || 0)}
+                      </div>
+                      <div className="stats-points-label">{period === 'today' ? 'Done Today' : 'Done (7d)'}</div>
                     </div>
                     <div className="stats-points-divider" />
                     <div className="stats-points-card">
                       <div className="stats-points-value" style={{ color: data.boardSnapshot.pointsTotal > 0 ? '#0073ea' : '#c0c4d0' }}>
                         {data.boardSnapshot.pointsTotal > 0
-                          ? Math.round((data.boardSnapshot.pointsCompleted / data.boardSnapshot.pointsTotal) * 100)
+                          ? Math.round(((summaryData?.pointsCompleted || 0) / data.boardSnapshot.pointsTotal) * 100)
                           : 0}%
                       </div>
-                      <div className="stats-points-label">Complete</div>
+                      <div className="stats-points-label">of Board</div>
                     </div>
                   </div>
                   <div className="stats-points-bar-track">
@@ -378,7 +381,7 @@ export default function StatisticsModal({ boardId, boardName, userId, onClose })
                       className="stats-points-bar-fill"
                       style={{
                         width: data.boardSnapshot.pointsTotal > 0
-                          ? `${(data.boardSnapshot.pointsCompleted / data.boardSnapshot.pointsTotal) * 100}%`
+                          ? `${Math.min(100, ((summaryData?.pointsCompleted || 0) / data.boardSnapshot.pointsTotal) * 100)}%`
                           : '0%'
                       }}
                     />
