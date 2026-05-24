@@ -745,6 +745,7 @@ html, body, #root {
 .col-due     { width: 130px; }
 .col-points  { width: 70px; text-align: center; }
 .col-delegate { width: 120px; }
+.col-work-on { width: 90px; }
 .col-actions { width: 52px; text-align: center !important; }
 
 /* ── Task row ─────────────────────────────────────────────────────────────── */
@@ -1135,6 +1136,150 @@ html, body, #root {
 }
 
 /* ── Delegate column ──────────────────────────────────────────────────────── */
+/* ── Work On button ────────────────────────────────────────────────────────── */
+.work-on-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid var(--sidebar-accent);
+  border-radius: var(--radius-sm);
+  color: var(--sidebar-accent);
+  font-size: 12px;
+  padding: 3px 9px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition);
+}
+
+.work-on-btn:hover {
+  background: var(--sidebar-accent);
+  color: #fff;
+}
+
+/* ── Work On modal ─────────────────────────────────────────────────────────── */
+.work-on-modal {
+  width: 600px;
+}
+
+.work-on-timer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 14px 24px;
+  background: var(--content-bg);
+  border-bottom: 1px solid var(--content-border);
+  gap: 8px;
+}
+
+.work-on-timer-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.work-on-timer-block.work-on-timer-elapsed {
+  border-left: 1px solid var(--content-border);
+  border-right: 1px solid var(--content-border);
+}
+
+.work-on-timer-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--content-text-dim);
+}
+
+.work-on-timer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.work-on-timer-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--content-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.work-on-timer-value.work-on-timer-paused {
+  color: var(--content-text-dim);
+}
+
+.work-on-pause-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--content-border);
+  background: var(--content-bg);
+  color: var(--content-text);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.work-on-pause-btn:hover {
+  background: var(--content-border);
+}
+
+.work-on-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.work-on-focus-btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.work-on-focus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--content-border);
+  background: var(--content-bg);
+  color: var(--content-text-dim);
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+  position: relative;
+}
+
+.work-on-focus-btn:hover {
+  background: var(--sidebar-bg);
+  color: var(--content-text);
+  border-color: #b0b8d8;
+}
+
+.work-on-focus-btn.has-content {
+  border-color: var(--sidebar-accent);
+  color: var(--sidebar-accent);
+}
+
+.work-on-focus-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sidebar-accent);
+  margin-left: 2px;
+}
+
 .delegate-btn {
   background: none;
   border: 1px solid #d8dce8;
@@ -1549,8 +1694,7 @@ html, body, #root {
 
 /* ── Description modal ────────────────────────────────────────────────────── */
 .desc-modal-overlay {
-  align-items: flex-start;
-  padding-top: 60px;
+  align-items: center;
 }
 
 .desc-modal {

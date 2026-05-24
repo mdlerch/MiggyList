@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import DescriptionModal from './DescriptionModal.jsx';
 import PromptModal from './PromptModal.jsx';
 import DelegateModal from './DelegateModal.jsx';
+import WorkOnModal from './WorkOnModal.jsx';
 
 const STATUS_OPTIONS = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 
@@ -89,6 +90,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
   const [editingPoints, setEditingPoints] = useState(false);
   const [pointsVal, setPointsVal] = useState(item.points != null ? String(item.points) : '');
   const [delegateModalOpen, setDelegateModalOpen] = useState(false);
+  const [workOnOpen, setWorkOnOpen] = useState(false);
 
   // Title handlers
   function commitTitle() {
@@ -342,6 +344,20 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
         )}
       </td>
 
+      {/* Work On */}
+      <td className="col-work-on">
+        <button
+          className="work-on-btn"
+          onClick={() => setWorkOnOpen(true)}
+          title="Work on this task"
+        >
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
+            <polygon points="1,0.5 10.5,5.5 1,10.5"/>
+          </svg>
+          Work On
+        </button>
+      </td>
+
       {/* Actions: archive + delete */}
       <td>
         <div className="row-actions">
@@ -393,6 +409,13 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
         onClose={() => setDelegateModalOpen(false)}
       />
     )}
-    </>
+    {workOnOpen && (
+      <WorkOnModal
+        item={item}
+        onUpdate={onUpdate}
+        onClose={() => setWorkOnOpen(false)}
+      />
+    )}
+</>
   );
 }
