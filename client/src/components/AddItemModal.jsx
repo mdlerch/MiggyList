@@ -80,7 +80,20 @@ export default function AddItemModal({ onSubmit, onClose, initialDueDate }) {
               />
             </div>
 
-            {/* Status + Due date + Points */}
+            {/* Time estimate */}
+            <div className="form-field">
+              <label htmlFor="item-points">Time</label>
+              <input
+                id="item-points"
+                name="points"
+                type="text"
+                placeholder="30m / 1h"
+                value={form.points}
+                onChange={handleChange}
+              />
+            </div>
+
+            {/* Status + Due date */}
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="item-status">Status</label>
@@ -104,17 +117,6 @@ export default function AddItemModal({ onSubmit, onClose, initialDueDate }) {
                   value={form.due_date}
                   onChange={handleChange}
                   onClick={(e) => e.target.showPicker()}
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="item-points">Time (min)</label>
-                <input
-                  id="item-points"
-                  name="points"
-                  type="text"
-                  placeholder="30m / 1h"
-                  value={form.points}
-                  onChange={handleChange}
                 />
               </div>
             </div>
