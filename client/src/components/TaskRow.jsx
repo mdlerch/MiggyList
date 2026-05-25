@@ -87,6 +87,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
 
   const [promptOpen, setPromptOpen] = useState(false);
   const [editingDue, setEditingDue] = useState(false);
+  const [dueVal, setDueVal] = useState(item.due_date || '');
   const [editingPoints, setEditingPoints] = useState(false);
   const [pointsVal, setPointsVal] = useState(item.points != null ? String(item.points) : '');
   const [delegateModalOpen, setDelegateModalOpen] = useState(false);
@@ -126,10 +127,13 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
     if (e.key === 'Escape') { setPointsVal(item.points != null ? String(item.points) : ''); setEditingPoints(false); }
   }
 
-  // Due date handler
+  // Due date handlers
   function handleDueChange(e) {
-    const v = e.target.value;
-    onUpdate({ due_date: v });
+    setDueVal(e.target.value);
+  }
+
+  function commitDue() {
+    onUpdate({ due_date: dueVal });
     setEditingDue(false);
   }
 
@@ -273,9 +277,9 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
             autoFocus
             type="date"
             className="due-date-input"
-            defaultValue={item.due_date}
+            value={dueVal}
             onChange={handleDueChange}
-            onBlur={() => setEditingDue(false)}
+            onBlur={commitDue}
             onFocus={(e) => e.target.showPicker()}
           />
         ) : (
