@@ -79,6 +79,7 @@ export function buildServer(userId, apiUrl = "http://localhost:3001", cfHeaders 
       priority: z.enum(["Low", "Medium", "High", "Critical"]).optional().describe(`Priority. One of: ${PRIORITY_VALUES.join(", ")}. Defaults to Medium.`),
       due_date: z.string().optional().describe("Due date (YYYY-MM-DD)"),
       description: z.string().optional().describe("Task description (markdown supported)"),
+      prompt: z.string().optional().describe("AI prompt for a downstream agent to execute this task"),
       points: z.number().int().optional().describe("Time estimate in minutes (integer, e.g. 10, 30, 60, 120)"),
     },
     async ({ board_id, group_id, title, status, priority, due_date, description, points }) => {
@@ -97,6 +98,7 @@ export function buildServer(userId, apiUrl = "http://localhost:3001", cfHeaders 
       priority: z.enum(["Low", "Medium", "High", "Critical"]).optional().describe(`New priority. One of: ${PRIORITY_VALUES.join(", ")}`),
       due_date: z.string().optional().describe("Due date (YYYY-MM-DD), or empty string to clear"),
       description: z.string().optional().describe("Task description (markdown supported)"),
+      prompt: z.string().optional().describe("AI prompt for a downstream agent to execute this task"),
       points: z.number().int().nullable().optional().describe("Story points, or null to clear"),
       delegated_to: z.string().nullable().optional().describe("Person this is delegated to, or null to clear"),
     },
