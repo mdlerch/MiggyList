@@ -42,9 +42,12 @@ function formatTimeOfDay(date) {
 }
 
 export default function WorkOnModal({ item, onUpdate, onClose }) {
+  const isDone = item.status === 'Done';
+
   const startedAt = useRef(Date.now());
   const pausedSince = useRef(null);
   const totalPausedMs = useRef(0);
+  const elapsedRef = useRef(0);
 
   const [elapsed, setElapsed] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -53,25 +56,31 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
 
   const [titleVal, setTitleVal] = useState(item.title);
   const [pointsVal, setPointsVal] = useState(item.points != null ? formatMinutes(item.points) : '');
+  const [actualVal, setActualVal] = useState(item.actual_minutes != null ? formatMinutes(item.actual_minutes) : '');
 
   useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape' && !descOpen && !promptOpen) onClose(); }
+    function onKey(e) {
+      if (e.key === 'Escape' && !descOpen && !promptOpen) handleClose();
+    }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose, descOpen, promptOpen]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [descOpen, promptOpen]);
 
   useEffect(() => {
-    if (paused) return;
+    if (isDone || paused) return;
     const id = setInterval(() => {
       const active = Date.now() - startedAt.current - totalPausedMs.current;
-      setElapsed(Math.floor(active / 1000));
+      const secs = Math.floor(active / 1000);
+      setElapsed(secs);
+      elapsedRef.current = secs;
     }, 1000);
     return () => clearInterval(id);
-  }, [paused]);
+  }, [isDone, paused]);
 
-  // keep local title/points in sync if item updates externally
   useEffect(() => { setTitleVal(item.title); }, [item.title]);
   useEffect(() => { setPointsVal(item.points != null ? formatMinutes(item.points) : ''); }, [item.points]);
+  useEffect(() => { setActualVal(item.actual_minutes != null ? formatMinutes(item.actual_minutes) : ''); }, [item.actual_minutes]);
 
   function togglePause() {
     if (paused) {
@@ -100,8 +109,34 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
     }
   }
 
+  function commitActual() {
+    const v = actualVal.trim();
+    if (v === '') {
+      onUpdate({ actual_minutes: null });
+    } else {
+      const n = parseTimeInput(v);
+      if (n && n > 0) onUpdate({ actual_minutes: n });
+      else setActualVal(item.actual_minutes != null ? formatMinutes(item.actual_minutes) : '');
+    }
+  }
+
+  function accumulateSession() {
+    const sessionMins = Math.ceil(elapsedRef.current / 60);
+    if (sessionMins > 0) {
+      onUpdate({ actual_minutes: (item.actual_minutes || 0) + sessionMins });
+    }
+  }
+
+  function handleClose() {
+    if (!isDone) accumulateSession();
+    onClose();
+  }
+
   function handleDone() {
-    onUpdate({ status: 'Done' });
+    const sessionMins = Math.ceil(elapsedRef.current / 60);
+    const updates = { status: 'Done' };
+    if (sessionMins > 0) updates.actual_minutes = (item.actual_minutes || 0) + sessionMins;
+    onUpdate(updates);
     onClose();
   }
 
@@ -110,51 +145,53 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
 
   return (
     <>
-      <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && handleClose()}>
         <div className="modal work-on-modal" role="dialog" aria-modal="true" aria-labelledby="work-on-title">
           {/* Header */}
           <div className="modal-header">
-            <h2 className="modal-title" id="work-on-title">Work On</h2>
-            <button className="modal-close" onClick={onClose} aria-label="Close">
+            <h2 className="modal-title" id="work-on-title">{isDone ? 'Review Task' : 'Work On'}</h2>
+            <button className="modal-close" onClick={handleClose} aria-label="Close">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </button>
           </div>
 
-          {/* Timer bar */}
-          <div className="work-on-timer-bar">
-            <div className="work-on-timer-block">
-              <span className="work-on-timer-label">Started</span>
-              <span className="work-on-timer-value">{formatTimeOfDay(new Date(startedAt.current))}</span>
-            </div>
-            <div className="work-on-timer-block work-on-timer-elapsed">
-              <span className="work-on-timer-label">Elapsed</span>
-              <div className="work-on-timer-row">
-                <span className={`work-on-timer-value${paused ? ' work-on-timer-paused' : ''}`}>
-                  {formatElapsed(elapsed)}
+          {/* Timer bar — active mode only */}
+          {!isDone && (
+            <div className="work-on-timer-bar">
+              <div className="work-on-timer-block">
+                <span className="work-on-timer-label">Started</span>
+                <span className="work-on-timer-value">{formatTimeOfDay(new Date(startedAt.current))}</span>
+              </div>
+              <div className="work-on-timer-block work-on-timer-elapsed">
+                <span className="work-on-timer-label">Elapsed</span>
+                <div className="work-on-timer-row">
+                  <span className={`work-on-timer-value${paused ? ' work-on-timer-paused' : ''}`}>
+                    {formatElapsed(elapsed)}
+                  </span>
+                  <button className="work-on-pause-btn" onClick={togglePause} title={paused ? 'Resume' : 'Pause'}>
+                    {paused ? (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                        <polygon points="2,1 11,6 2,11"/>
+                      </svg>
+                    ) : (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                        <rect x="2" y="1" width="3" height="10" rx="1"/>
+                        <rect x="7" y="1" width="3" height="10" rx="1"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="work-on-timer-block">
+                <span className="work-on-timer-label">Est. Done</span>
+                <span className="work-on-timer-value">
+                  {estimatedDone ? formatTimeOfDay(estimatedDone) : '—'}
                 </span>
-                <button className="work-on-pause-btn" onClick={togglePause} title={paused ? 'Resume' : 'Pause'}>
-                  {paused ? (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                      <polygon points="2,1 11,6 2,11"/>
-                    </svg>
-                  ) : (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                      <rect x="2" y="1" width="3" height="10" rx="1"/>
-                      <rect x="7" y="1" width="3" height="10" rx="1"/>
-                    </svg>
-                  )}
-                </button>
               </div>
             </div>
-            <div className="work-on-timer-block">
-              <span className="work-on-timer-label">Est. Done</span>
-              <span className="work-on-timer-value">
-                {estimatedDone ? formatTimeOfDay(estimatedDone) : '—'}
-              </span>
-            </div>
-          </div>
+          )}
 
           {/* Body */}
           <div className="modal-body work-on-body">
@@ -171,8 +208,8 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
               />
             </div>
 
-            {/* Status / Priority / Due / Time row */}
-            <div className="form-row">
+            {/* Row 1: Status / Priority / Due */}
+            <div className="form-row form-row-3">
               <div className="form-field">
                 <label htmlFor="wo-status">Status</label>
                 <select id="wo-status" value={item.status} onChange={(e) => onUpdate({ status: e.target.value })}>
@@ -195,8 +232,12 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
                   onClick={(e) => e.target.showPicker()}
                 />
               </div>
+            </div>
+
+            {/* Row 2: Estimate / Actual */}
+            <div className="form-row">
               <div className="form-field">
-                <label htmlFor="wo-points">Time</label>
+                <label htmlFor="wo-points">Estimate</label>
                 <input
                   id="wo-points"
                   type="text"
@@ -204,6 +245,18 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
                   value={pointsVal}
                   onChange={(e) => setPointsVal(e.target.value)}
                   onBlur={commitPoints}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="wo-actual">Actual</label>
+                <input
+                  id="wo-actual"
+                  type="text"
+                  placeholder="30m / 1h"
+                  value={actualVal}
+                  onChange={(e) => setActualVal(e.target.value)}
+                  onBlur={commitActual}
                   onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
                 />
               </div>
@@ -244,8 +297,14 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
 
           {/* Footer */}
           <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="button" className="btn btn-primary" onClick={handleDone}>Mark Done</button>
+            {isDone ? (
+              <button type="button" className="btn btn-primary" onClick={handleClose}>Close</button>
+            ) : (
+              <>
+                <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
+                <button type="button" className="btn btn-primary" onClick={handleDone}>Mark Done</button>
+              </>
+            )}
           </div>
         </div>
       </div>

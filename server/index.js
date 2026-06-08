@@ -319,7 +319,7 @@ app.put('/miggylist-api/items/:id', requireAuth, (req, res) => {
   const found = findItem(boards, req.params.id);
   if (!found) return res.status(404).json({ error: 'Item not found' });
   const { item, board } = found;
-  const { title, status, priority, assignee, due_date, description, prompt, delegated_to, points } = req.body;
+  const { title, status, priority, assignee, due_date, description, prompt, delegated_to, points, actual_minutes } = req.body;
   const prevStatus = item.status;
   const wasDelegated = item.delegated_to !== null && item.delegated_to !== undefined;
   if (title !== undefined) item.title = title;
@@ -333,6 +333,10 @@ app.put('/miggylist-api/items/:id', requireAuth, (req, res) => {
   if (points !== undefined) {
     const p = points !== null && points !== '' ? parseInt(points, 10) : null;
     item.points = p && p > 0 ? p : null;
+  }
+  if (actual_minutes !== undefined) {
+    const a = actual_minutes !== null ? parseInt(actual_minutes, 10) : null;
+    item.actual_minutes = a && a > 0 ? a : null;
   }
   if (status === 'Done' && prevStatus !== 'Done') logEvent(req.userId, 'completed', board.id, { points: item.points || 0 });
   if (delegated_to !== undefined && delegated_to !== null && !wasDelegated) logEvent(req.userId, 'delegated', board.id);

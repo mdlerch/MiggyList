@@ -295,7 +295,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
         )}
       </td>
 
-      {/* Time estimate */}
+      {/* Time estimate + actual */}
       <td className="col-points">
         {editingPoints ? (
           <input
@@ -315,6 +315,11 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
             title="Click to edit (enter minutes)"
           >
             {item.points != null ? formatMinutes(item.points) : <em style={{ color: '#c4c4c4', fontStyle: 'normal' }}>—</em>}
+          </span>
+        )}
+        {item.actual_minutes > 0 && (
+          <span className="actual-badge" title="Actual time spent">
+            {formatMinutes(item.actual_minutes)}
           </span>
         )}
       </td>
@@ -348,18 +353,32 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
         )}
       </td>
 
-      {/* Work On */}
+      {/* Work On / Update */}
       <td className="col-work-on">
-        <button
-          className="work-on-btn"
-          onClick={() => setWorkOnOpen(true)}
-          title="Work on this task"
-        >
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
-            <polygon points="1,0.5 10.5,5.5 1,10.5"/>
-          </svg>
-          Work On
-        </button>
+        {item.status === 'Done' ? (
+          <button
+            className="work-on-btn"
+            onClick={() => setWorkOnOpen(true)}
+            title="Review this task"
+          >
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1.5 9.5l1.5-1.5L8.5 2.5a1.06 1.06 0 0 1 1.5 1.5L3.5 9.5l-2 .5z"/>
+              <path d="M7 4l1.5 1.5"/>
+            </svg>
+            Update
+          </button>
+        ) : (
+          <button
+            className="work-on-btn"
+            onClick={() => setWorkOnOpen(true)}
+            title="Work on this task"
+          >
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
+              <polygon points="1,0.5 10.5,5.5 1,10.5"/>
+            </svg>
+            Work On
+          </button>
+        )}
       </td>
 
       {/* Actions: archive + delete */}
