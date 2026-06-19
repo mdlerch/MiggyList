@@ -44,31 +44,46 @@ function formatTimeOfDay(date) {
 export default function WorkOnModal({ item, onUpdate, onClose }) {
   const isDone = item.status === 'Done';
 
-  const startedAt = useRef(Date.now());
+  // Timer refs
+  const startedAt = useRef(null);
+  const sessionStartRef = useRef(null);
   const pausedSince = useRef(null);
   const totalPausedMs = useRef(0);
   const elapsedRef = useRef(0);
 
+  // Timer state
+  const [isTimerActive, setIsTimerActive] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [paused, setPaused] = useState(false);
+
+  // Sub-modal state
   const [descOpen, setDescOpen] = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
 
+  // Pending field state — nothing hits the server until Save or Mark Done
   const [titleVal, setTitleVal] = useState(item.title);
+  const [statusVal, setStatusVal] = useState(item.status);
+  const [priorityVal, setPriorityVal] = useState(item.priority);
+  const [dueDateVal, setDueDateVal] = useState(item.due_date || '');
   const [pointsVal, setPointsVal] = useState(item.points != null ? formatMinutes(item.points) : '');
   const [actualVal, setActualVal] = useState(item.actual_minutes != null ? formatMinutes(item.actual_minutes) : '');
 
+  // Escape: stop timer (back to idle) if timing, otherwise close
   useEffect(() => {
     function onKey(e) {
-      if (e.key === 'Escape' && !descOpen && !promptOpen) handleClose();
+      if (e.key === 'Escape' && !descOpen && !promptOpen) {
+        if (isTimerActive) handleStop();
+        else onClose();
+      }
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [descOpen, promptOpen]);
+  }, [onClose, descOpen, promptOpen, isTimerActive]);
 
+  // Timer tick
   useEffect(() => {
-    if (isDone || paused) return;
+    if (!isTimerActive || paused) return;
     const id = setInterval(() => {
       const active = Date.now() - startedAt.current - totalPausedMs.current;
       const secs = Math.floor(active / 1000);
@@ -76,11 +91,7 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
       elapsedRef.current = secs;
     }, 1000);
     return () => clearInterval(id);
-  }, [isDone, paused]);
-
-  useEffect(() => { setTitleVal(item.title); }, [item.title]);
-  useEffect(() => { setPointsVal(item.points != null ? formatMinutes(item.points) : ''); }, [item.points]);
-  useEffect(() => { setActualVal(item.actual_minutes != null ? formatMinutes(item.actual_minutes) : ''); }, [item.actual_minutes]);
+  }, [isTimerActive, paused]);
 
   function togglePause() {
     if (paused) {
@@ -92,77 +103,106 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
     setPaused(p => !p);
   }
 
-  function commitTitle() {
-    const v = titleVal.trim();
-    if (v && v !== item.title) onUpdate({ title: v });
-    else setTitleVal(item.title);
-  }
-
-  function commitPoints() {
+  // Local-only normalization on blur (no server call)
+  function normalizePoints() {
     const v = pointsVal.trim();
-    if (v === '') {
-      onUpdate({ points: null });
-    } else {
-      const n = parseTimeInput(v);
-      if (n && n > 0) onUpdate({ points: n });
-      else setPointsVal(item.points != null ? formatMinutes(item.points) : '');
-    }
+    if (!v) return;
+    const n = parseTimeInput(v);
+    if (n && n > 0) setPointsVal(formatMinutes(n));
+    else setPointsVal(item.points != null ? formatMinutes(item.points) : '');
   }
 
-  function commitActual() {
+  function normalizeActual() {
     const v = actualVal.trim();
-    if (v === '') {
-      onUpdate({ actual_minutes: null });
-    } else {
-      const n = parseTimeInput(v);
-      if (n && n > 0) onUpdate({ actual_minutes: n });
-      else setActualVal(item.actual_minutes != null ? formatMinutes(item.actual_minutes) : '');
-    }
+    if (!v) return;
+    const n = parseTimeInput(v);
+    if (n && n > 0) setActualVal(formatMinutes(n));
+    else setActualVal(item.actual_minutes != null ? formatMinutes(item.actual_minutes) : '');
   }
 
-  function accumulateSession() {
-    const sessionMins = Math.ceil(elapsedRef.current / 60);
-    if (sessionMins > 0) {
-      onUpdate({ actual_minutes: (item.actual_minutes || 0) + sessionMins });
-    }
+  function handleStartWork() {
+    const parsedActual = parseTimeInput(actualVal) || 0;
+    const initialSeconds = parsedActual * 60;
+    const now = Date.now();
+    sessionStartRef.current = now;
+    startedAt.current = now - initialSeconds * 1000; // offset so elapsed starts at prior actual
+    totalPausedMs.current = 0;
+    pausedSince.current = null;
+    elapsedRef.current = initialSeconds;
+    setElapsed(initialSeconds);
+    setPaused(false);
+    setIsTimerActive(true);
   }
 
-  function handleClose() {
-    if (!isDone) accumulateSession();
+  function handleStop() {
+    const totalMins = Math.ceil(elapsedRef.current / 60);
+    if (totalMins > 0) {
+      onUpdate({ actual_minutes: totalMins });
+      setActualVal(formatMinutes(totalMins));
+    }
+    setIsTimerActive(false);
+    setPaused(false);
+    totalPausedMs.current = 0;
+  }
+
+  function collectFieldUpdates() {
+    const updates = {};
+    const t = titleVal.trim();
+    if (t && t !== item.title) updates.title = t;
+    if (statusVal !== item.status) updates.status = statusVal;
+    if (priorityVal !== item.priority) updates.priority = priorityVal;
+    const due = dueDateVal || null;
+    if (due !== (item.due_date || null)) updates.due_date = due;
+    const parsedPoints = parseTimeInput(pointsVal) ?? null;
+    if (parsedPoints !== item.points) updates.points = parsedPoints;
+    return updates;
+  }
+
+  function handleSave() {
+    const updates = collectFieldUpdates();
+    const parsedActual = parseTimeInput(actualVal) ?? null;
+    if (parsedActual !== item.actual_minutes) updates.actual_minutes = parsedActual;
+    if (Object.keys(updates).length > 0) onUpdate(updates);
     onClose();
   }
 
   function handleDone() {
-    const sessionMins = Math.ceil(elapsedRef.current / 60);
-    const updates = { status: 'Done' };
-    if (sessionMins > 0) updates.actual_minutes = (item.actual_minutes || 0) + sessionMins;
+    const updates = collectFieldUpdates();
+    updates.status = 'Done';
+    const totalMins = Math.ceil(elapsedRef.current / 60);
+    if (totalMins > 0) updates.actual_minutes = totalMins;
     onUpdate(updates);
     onClose();
   }
 
-  const remaining = item.points != null ? Math.max(0, item.points * 60 - elapsed) : null;
+  // Est. Done uses the locally-edited estimate if available
+  const parsedPointsForTimer = parseTimeInput(pointsVal) ?? item.points ?? null;
+  const remaining = parsedPointsForTimer ? Math.max(0, parsedPointsForTimer * 60 - elapsed) : null;
   const estimatedDone = remaining != null ? new Date(Date.now() + remaining * 1000) : null;
 
   return (
     <>
-      <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && handleClose()}>
+      <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
         <div className="modal work-on-modal" role="dialog" aria-modal="true" aria-labelledby="work-on-title">
+
           {/* Header */}
           <div className="modal-header">
-            <h2 className="modal-title" id="work-on-title">{isDone ? 'Review Task' : 'Work On'}</h2>
-            <button className="modal-close" onClick={handleClose} aria-label="Close">
+            <h2 className="modal-title" id="work-on-title">
+              {isDone ? 'Review Task' : 'Work On'}
+            </h2>
+            <button className="modal-close" onClick={onClose} aria-label="Close">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path d="M14 4L4 14M4 4l10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </button>
           </div>
 
-          {/* Timer bar — active mode only */}
-          {!isDone && (
+          {/* Timer bar — only while timing is active */}
+          {isTimerActive && (
             <div className="work-on-timer-bar">
               <div className="work-on-timer-block">
                 <span className="work-on-timer-label">Started</span>
-                <span className="work-on-timer-value">{formatTimeOfDay(new Date(startedAt.current))}</span>
+                <span className="work-on-timer-value">{formatTimeOfDay(new Date(sessionStartRef.current))}</span>
               </div>
               <div className="work-on-timer-block work-on-timer-elapsed">
                 <span className="work-on-timer-label">Elapsed</span>
@@ -203,8 +243,10 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
                 type="text"
                 value={titleVal}
                 onChange={(e) => setTitleVal(e.target.value)}
-                onBlur={commitTitle}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setTitleVal(item.title); e.target.blur(); } }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.target.blur();
+                  if (e.key === 'Escape') setTitleVal(item.title);
+                }}
               />
             </div>
 
@@ -212,13 +254,13 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
             <div className="form-row form-row-3">
               <div className="form-field">
                 <label htmlFor="wo-status">Status</label>
-                <select id="wo-status" value={item.status} onChange={(e) => onUpdate({ status: e.target.value })}>
+                <select id="wo-status" value={statusVal} onChange={(e) => setStatusVal(e.target.value)}>
                   {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="form-field">
                 <label htmlFor="wo-priority">Priority</label>
-                <select id="wo-priority" value={item.priority} onChange={(e) => onUpdate({ priority: e.target.value })}>
+                <select id="wo-priority" value={priorityVal} onChange={(e) => setPriorityVal(e.target.value)}>
                   {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
@@ -227,8 +269,8 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
                 <input
                   id="wo-due"
                   type="date"
-                  value={item.due_date || ''}
-                  onChange={(e) => onUpdate({ due_date: e.target.value })}
+                  value={dueDateVal}
+                  onChange={(e) => setDueDateVal(e.target.value)}
                   onClick={(e) => e.target.showPicker()}
                 />
               </div>
@@ -244,7 +286,7 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
                   placeholder="30m / 1h"
                   value={pointsVal}
                   onChange={(e) => setPointsVal(e.target.value)}
-                  onBlur={commitPoints}
+                  onBlur={normalizePoints}
                   onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
                 />
               </div>
@@ -255,9 +297,12 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
                   type="text"
                   placeholder="30m / 1h"
                   value={actualVal}
+                  readOnly={isTimerActive}
                   onChange={(e) => setActualVal(e.target.value)}
-                  onBlur={commitActual}
+                  onBlur={normalizeActual}
                   onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                  className={isTimerActive ? 'wo-field-locked' : ''}
+                  title={isTimerActive ? 'Updated when you click Mark Done' : ''}
                 />
               </div>
             </div>
@@ -297,13 +342,28 @@ export default function WorkOnModal({ item, onUpdate, onClose }) {
 
           {/* Footer */}
           <div className="modal-footer">
-            {isDone ? (
-              <button type="button" className="btn btn-primary" onClick={handleClose}>Close</button>
-            ) : (
-              <>
-                <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancel</button>
-                <button type="button" className="btn btn-primary" onClick={handleDone}>Mark Done</button>
-              </>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+
+            {/* Save: visible in idle and review modes (not while timer is running) */}
+            {!isTimerActive && (
+              <button type="button" className="btn btn-secondary" onClick={handleSave}>Save</button>
+            )}
+
+            {/* Start Work → Stop/Mark Done for non-Done tasks */}
+            {!isDone && (
+              isTimerActive ? (
+                <>
+                  <button type="button" className="btn btn-secondary" onClick={handleStop}>Stop</button>
+                  <button type="button" className="btn btn-primary" onClick={handleDone}>Mark Done</button>
+                </>
+              ) : (
+                <button type="button" className="btn btn-primary work-on-start-btn" onClick={handleStartWork}>
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
+                    <polygon points="1,0.5 10.5,5.5 1,10.5"/>
+                  </svg>
+                  Start Work
+                </button>
+              )
             )}
           </div>
         </div>

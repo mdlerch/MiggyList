@@ -1245,6 +1245,18 @@ html, body, #root {
   overflow-y: auto;
 }
 
+.wo-field-locked {
+  background: var(--content-bg) !important;
+  color: var(--content-text-dim);
+  cursor: default;
+}
+
+.work-on-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .work-on-focus-btns {
   display: flex;
   gap: 10px;
