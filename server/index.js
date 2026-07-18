@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -56,6 +57,19 @@ if (fs.existsSync(DB_PATH)) {
   saveLocalCache();
   console.log('db.json not found — created empty multi-user database');
 }
+
+// Migration: every user gets a bearer token for MCP clients that only support
+// Authorization: Bearer <token> (not the x-mcp-username/x-mcp-password headers).
+// Generated once and persisted; printed here so it can be grabbed from the logs.
+let mcpTokensGenerated = false;
+for (const user of db.users) {
+  if (!user.mcp_token) {
+    user.mcp_token = randomBytes(32).toString('hex');
+    mcpTokensGenerated = true;
+    console.log(`Generated MCP bearer token for '${user.username}': ${user.mcp_token}`);
+  }
+}
+if (mcpTokensGenerated) saveLocalCache();
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function getUserBoards(userId) {
@@ -756,11 +770,19 @@ app.all('/mcp', async (req, res) => {
     return res.status(400).json({ error: 'No valid MCP session. Send an initialize request first.' });
   }
 
-  const username = req.headers['x-mcp-username'];
-  const password = req.headers['x-mcp-password'];
-  const user = db.users.find(
-    (u) => u.username.toLowerCase() === (username || '').toLowerCase() && u.password === password
-  );
+  const authHeader = req.headers['authorization'];
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+
+  let user;
+  if (bearerToken) {
+    user = db.users.find((u) => u.mcp_token === bearerToken);
+  } else {
+    const username = req.headers['x-mcp-username'];
+    const password = req.headers['x-mcp-password'];
+    user = db.users.find(
+      (u) => u.username.toLowerCase() === (username || '').toLowerCase() && u.password === password
+    );
+  }
   if (!user) return res.status(401).json({ error: 'Invalid MCP credentials' });
 
   const transport = new StreamableHTTPServerTransport({
