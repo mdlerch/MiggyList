@@ -5,7 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -540,7 +541,12 @@ app.get('/miggylist-api/stats', requireAuth, (req, res) => {
   res.json({ today: todayCounts, daily, boardSnapshot });
 });
 
-// ── MCP SSE Server ───────────────────────────────────────────────────────────
+// ── MCP Server ───────────────────────────────────────────────────────────────
+// Mounted on this same Express app (not a separate process), reachable from
+// any machine on the LAN at http://<this-host>:3001/mcp via the Streamable
+// HTTP transport. Auth (x-mcp-username/x-mcp-password) is checked once, on
+// the request that opens a new MCP session; the session id is trusted for
+// the rest of that session's requests — same trust model as x-user-id above.
 
 const STATUS_VALUES = ['Inbox', 'Spark', 'Slog', 'In Progress', 'Done'];
 const PRIORITY_VALUES = ['Low', 'Medium', 'High', 'Critical'];
@@ -727,11 +733,29 @@ function createMcpServer(userId) {
   return server;
 }
 
-// Active SSE sessions keyed by sessionId
-const mcpSessions = new Map();
+// Active Streamable HTTP sessions keyed by sessionId
+const mcpTransports = new Map();
 
-// GET /mcp/sse — MCP client opens SSE stream here
-app.get('/mcp/sse', async (req, res) => {
+// POST /mcp — new session (initialize) or an existing session's next message
+// GET /mcp — server-to-client notification stream for an existing session
+// DELETE /mcp — client-initiated session termination
+app.all('/mcp', async (req, res) => {
+  const sessionId = req.headers['mcp-session-id'];
+
+  if (sessionId && mcpTransports.has(sessionId)) {
+    const { transport } = mcpTransports.get(sessionId);
+    await transport.handleRequest(req, res, req.method === 'POST' ? req.body : undefined);
+    return;
+  }
+
+  if (sessionId && !mcpTransports.has(sessionId)) {
+    return res.status(404).json({ error: 'MCP session not found' });
+  }
+
+  if (req.method !== 'POST' || !isInitializeRequest(req.body)) {
+    return res.status(400).json({ error: 'No valid MCP session. Send an initialize request first.' });
+  }
+
   const username = req.headers['x-mcp-username'];
   const password = req.headers['x-mcp-password'];
   const user = db.users.find(
@@ -739,25 +763,24 @@ app.get('/mcp/sse', async (req, res) => {
   );
   if (!user) return res.status(401).json({ error: 'Invalid MCP credentials' });
 
-  const transport = new SSEServerTransport('/mcp/messages', res);
-  mcpSessions.set(transport.sessionId, transport);
-  req.on('close', () => mcpSessions.delete(transport.sessionId));
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => uuidv4(),
+    onsessioninitialized: (newSessionId) => {
+      mcpTransports.set(newSessionId, { transport, userId: user.id });
+    },
+  });
+  transport.onclose = () => {
+    if (transport.sessionId) mcpTransports.delete(transport.sessionId);
+  };
 
   const mcpServer = createMcpServer(user.id);
   await mcpServer.connect(transport);
-});
-
-// POST /mcp/messages — MCP client sends messages here
-app.post('/mcp/messages', async (req, res) => {
-  const { sessionId } = req.query;
-  const transport = mcpSessions.get(sessionId);
-  if (!transport) return res.status(404).json({ error: 'MCP session not found' });
-  await transport.handlePostMessage(req, res, req.body);
+  await transport.handleRequest(req, res, req.body);
 });
 
 // ── Start ──────────────────────────────────────────────────────────────────
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`MiggyList server running on http://localhost:${PORT}`);
-  console.log(`MCP SSE endpoint: http://localhost:${PORT}/mcp/sse`);
+  console.log(`MCP endpoint (LAN-reachable): http://localhost:${PORT}/mcp`);
 });
