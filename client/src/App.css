@@ -3216,10 +3216,19 @@ html, body, #root {
   .col-points { order: 5; }
   .col-delegate { order: 6; }
 
+  /* Icon row: description, AI prompt, archive, delete together */
   .col-desc { order: 7; flex-basis: 100%; margin-top: 4px; padding-top: 6px; border-top: 1px solid #f0f2f7; }
   .col-prompt { order: 8; }
-  .col-work-on { order: 9; }
-  .col-actions { order: 10; margin-left: auto; }
+  .col-actions { order: 9; margin-left: auto; }
+
+  /* Work On / Update gets its own full-width row */
+  .col-work-on { order: 10; flex-basis: 100%; }
+  .col-work-on .work-on-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 9px;
+    font-size: 13px;
+  }
 
   /* These are hover-revealed on desktop, but touch has no hover — keep them visible */
   .row-archive-btn, .row-delete-btn, .undelegate-btn {
