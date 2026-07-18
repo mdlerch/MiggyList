@@ -22,6 +22,7 @@ export default function App() {
   const [boardLoading, setBoardLoading] = useState(false);
   const [error, setError] = useState(null);
   const [inboxOpen, setInboxOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   function authHeaders() {
     return {
@@ -319,7 +320,8 @@ export default function App() {
         boards={boards}
         activeBoardId={activeBoardId}
         currentUser={currentUser}
-        onSelectBoard={setActiveBoardId}
+        open={sidebarOpen}
+        onSelectBoard={(id) => { setActiveBoardId(id); setSidebarOpen(false); }}
         onCreateBoard={handleCreateBoard}
         onDeleteBoard={handleDeleteBoard}
         onReorderBoards={handleReorderBoards}
@@ -327,6 +329,9 @@ export default function App() {
         onImportBoard={handleImportBoard}
         onLogout={handleLogout}
       />
+      {sidebarOpen && (
+        <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
+      )}
       <div className="main-content">
         {boardLoading ? (
           <div className="centered-msg">
@@ -348,10 +353,16 @@ export default function App() {
             onMoveItem={handleMoveItem}
             onReorderGroups={(newGroups) => handleReorderGroups(boardData.id, newGroups)}
             onProcessInbox={() => setInboxOpen(true)}
+            onOpenSidebar={() => setSidebarOpen(true)}
             userId={currentUser?.id}
           />
         ) : (
-          <div className="centered-msg">Select a board to get started.</div>
+          <div className="centered-msg">
+            <button className="sidebar-toggle-btn" onClick={() => setSidebarOpen(true)} aria-label="Open boards menu">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+            </button>
+            Select a board to get started.
+          </div>
         )}
       </div>
       {inboxOpen && (

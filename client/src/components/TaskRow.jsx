@@ -177,7 +177,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
       </td>
 
       {/* Task name */}
-      <td style={{ borderLeft: `4px solid ${groupColor}` }}>
+      <td className="col-name" style={{ borderLeft: `4px solid ${groupColor}` }}>
         <div className="task-name-cell">
           {editingTitle ? (
             <input
@@ -242,7 +242,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
       </td>
 
       {/* Status */}
-      <td>
+      <td className="col-status">
         <div className="badge-wrap">
           <div style={{ position: 'relative', display: 'inline-flex' }}>
             <span className={`badge ${statusClass(item.status)}`}>
@@ -271,7 +271,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
       </td>
 
       {/* Due date */}
-      <td>
+      <td className="col-due">
         {editingDue ? (
           <input
             autoFocus
@@ -382,7 +382,7 @@ export default function TaskRow({ item, groupColor, onUpdate, onDelete, onArchiv
       </td>
 
       {/* Actions: archive + delete */}
-      <td>
+      <td className="col-actions">
         <div className="row-actions">
           <button
             className="row-archive-btn"

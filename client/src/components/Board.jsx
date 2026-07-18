@@ -58,6 +58,7 @@ export default function Board({
   onMoveItem,
   onReorderGroups,
   onProcessInbox,
+  onOpenSidebar,
   userId,
 }) {
   const boardRef = useRef(board);
@@ -293,6 +294,15 @@ export default function Board({
       {/* Board header */}
       <div className="board-header">
         <button
+          className="sidebar-toggle-btn"
+          onClick={onOpenSidebar}
+          aria-label="Open boards menu"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <button
           className="board-header-emoji"
           style={{ background: board.color + '18', color: board.color }}
           onClick={handleEmojiClick}
@@ -329,7 +339,7 @@ export default function Board({
             <path d="M7 1v8M4 6l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M2 10v1.5A1.5 1.5 0 003.5 13h7a1.5 1.5 0 001.5-1.5V10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
-          Export
+          <span className="btn-label">Export</span>
         </button>
         <button className="board-export-btn" onClick={() => setArchivedOpen(true)} title="View archived tasks">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -337,7 +347,7 @@ export default function Board({
             <path d="M2.5 5.5v5a1 1 0 001 1h7a1 1 0 001-1v-5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
             <path d="M5.5 8.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
-          Archived
+          <span className="btn-label">Archived</span>
         </button>
         <button className="board-export-btn" onClick={() => setStatsOpen(true)} title="View statistics">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -345,14 +355,14 @@ export default function Board({
             <rect x="5.5" y="4" width="2.5" height="9" rx="1" fill="currentColor"/>
             <rect x="10" y="1.5" width="2.5" height="11.5" rx="1" fill="currentColor"/>
           </svg>
-          Statistics
+          <span className="btn-label">Statistics</span>
         </button>
-        <button className="process-inbox-btn" onClick={onProcessInbox}>
+        <button className="process-inbox-btn" onClick={onProcessInbox} title="Process Inbox">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <rect x="1" y="1" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
             <path d="M4 6l2.5 2.5L10 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          Process Inbox
+          <span className="btn-label">Process Inbox</span>
         </button>
       </div>
 

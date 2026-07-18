@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import EmojiPicker, { defaultEmoji } from './EmojiPicker.jsx';
 
-export default function Sidebar({ boards, activeBoardId, currentUser, onSelectBoard, onCreateBoard, onDeleteBoard, onReorderBoards, onUpdateBoard, onImportBoard, onLogout }) {
+export default function Sidebar({ boards, activeBoardId, currentUser, open, onSelectBoard, onCreateBoard, onDeleteBoard, onReorderBoards, onUpdateBoard, onImportBoard, onLogout }) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState('');
   const importRef = useRef(null);
@@ -111,7 +111,7 @@ export default function Sidebar({ boards, activeBoardId, currentUser, onSelectBo
   const pickerBoard = pickerBoardId ? boards.find((b) => b.id === pickerBoardId) : null;
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${open ? ' sidebar-open' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-mark">M</div>
